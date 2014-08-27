@@ -6,6 +6,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 namespace cmdlp {
   class parser;
@@ -85,7 +86,13 @@ namespace cmdlp {
       : option(), option_crtp<value_option<bool> >(), value_m(&value)
     {}
     virtual ~value_option() {}
-    virtual void observe() { *value_m = true; }
+    virtual void observe() {
+      if (this->count() == 0) {
+	*value_m = ! *value_m;
+      }
+      option::observe();
+    }
+    
     virtual bool need_arg() const { return false; }
     virtual void assign(const char* str) {}
     virtual void describe(std::ostream& os) const {
@@ -112,9 +119,9 @@ namespace cmdlp {
       using namespace std;
       ostringstream s;
       for (auto it = begin(options_m); it != end(options_m); ++it) {
-	auto jt = keys_m.find(*it);
-	if (jt != keys_m.end()) {
-	  s << jt->second;
+	auto jt = bindings_m.find(*it);
+	if (jt != bindings_m.end()) {
+	  print_call(s, jt->second.first, jt->second.second, true);
 	} else {
 	  s << "n/n";
 	}
@@ -236,41 +243,14 @@ namespace cmdlp {
       return *opt_ptr;
     }
     void name(option* opt, const char flag, const char* const name) {
-      if (bind(opt, flag) && bind(opt, name)) {
-	auto p = keys_m.insert(make_pair(opt, std::string()));
-	if (! p.second) {
-	  p.first->second.push_back('|');
-	}
-	if (*name == flag) {
-	  p.first->second.append("-[-");
-	  p.first->second.push_back(flag);
-	  p.first->second.push_back(']');
-	  p.first->second.append(&name[1]);
-	} else {
-	  p.first->second.push_back('-');
-	  p.first->second.push_back(flag);
-	  p.first->second.append("|--");
-	  p.first->second.append(name);
-	}
-      }
+      bind(opt, flag);
+      bind(opt, name);
     }
     void name(option* opt, const char* const name) {
       bind(opt, name);
-      auto p = keys_m.insert(make_pair(opt, std::string()));
-      if (! p.second) {
-	p.first->second.push_back('|');
-      }
-      p.first->second.append("--");
-      p.first->second.append(name);
     }
     void name(option* opt, const char flag) {
       bind(opt, flag);
-      auto p = keys_m.insert(make_pair(opt, std::string()));
-      if (! p.second) {
-	p.first->second.push_back('|');
-      }
-      p.first->second.push_back('-');
-      p.first->second.push_back(flag);
     }
     bool bind(option* opt, const char flag) {
       auto p = flags_m.insert(std::make_pair(flag, opt));
@@ -279,6 +259,8 @@ namespace cmdlp {
 	s << "Failed to bind option to flag '-" << flag << "'. "
 	  << "It already exists.";
 	throw std::runtime_error(s.str().c_str());
+      } else {
+	bindings_m[opt].second.push_back(flag);
       }
       return p.second;
     }
@@ -292,12 +274,35 @@ namespace cmdlp {
 	s << "Failed to bind option to name '--" << name << "'. "
 	  << "It already exists.";
 	throw std::runtime_error(s.str().c_str());
+      } else {
+	bindings_m[opt].first.push_back(name);
       }
       return p.second;
     }
   private:
+    static void print_call(std::ostream& s, const std::vector<std::string>& names, std::vector<char> flags, bool print_all) {
+      using namespace std;
+      for (auto it = begin(names); it != end(names); ++it) {
+	if (it != begin(names)) {
+	  s << "|";
+	}
+	const auto pos = find(begin(flags), end(flags), it->front());
+	if (pos != end(flags)) {
+	  flags.erase(pos);
+	  s << "-[-" << it->front() << "]" << it->substr(1);
+	} else {
+	  s << "--" << *it;
+	}
+      }
+      for (auto it = begin(flags); it != end(flags); ++it) {
+	if (names.size() != 0 || it != begin(flags)) {
+	  s << "|";
+	}
+	s << "-" << *it;
+      }
+    }
     std::vector<option*> options_m;
-    std::unordered_map<option*, std::string> keys_m;
+    std::unordered_map<option*, std::pair<std::vector<std::string>, std::vector<char> > > bindings_m;
     std::unordered_map<char, option*> flags_m;
     std::unordered_map<std::string, option*> names_m;
   };

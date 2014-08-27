@@ -1,44 +1,79 @@
+# ========================================================================
+# Makefile
+#
+# Authors: Markus Saers <masaers@gmail.com>
+# ========================================================================
+#
+# Settings
+#
 
 CXXFLAGS+=-Wall -pedantic -std=c++11 -g -O3
 LDFLAGS=
 
-BIN_NAMES=
+PROG_NAMES=
 TEST_NAMES=cmdlp_test
 
-OBJECTS=$((filter-out $(BIN_NAMES:%=%.cpp),$(wildcard *.cpp)):%.cpp=%.o) \
-        $((filter-out $(TEST_NAMES:%=%.cpp),$(wildcard *.cpp)):%.cpp=%.o)
 
+#
+# Derived settings
+#
+
+# List of binaries that needs to be built
+BIN_NAMES=$(PROG_NAMES) $(TEST_NAMES)
+
+# Object files are c++ sources that do not result in stand alone binaries
+OBJECTS=$((filter-out $(BIN_NAMES:%=%.cpp),$(wildcard *.cpp)):%.cpp=build/obj/%.o)
+
+
+#
+# Targets
+#
 
 # Clear default suffix rules
 .SUFFIXES :
 # Keep STAMPs and dependencies between calls
 .PRECIOUS : %/.STAMP build/dep/%.d build/obj/%.o
 
-all : test binaries
-
-test : $(TEST_NAMES:%=build/test/%)
+all : binaries
 
 binaries : $(BIN_NAMES:%=build/bin/%)
 
-build/bin/% : build/obj/%.o build/dep/%.d $(OBJECTS) build/bin/.STAMP makefile
+test : $(TEST_NAMES:%=build/test/%.out)
+	@if [ -s build/test/.ERROR ]; then \
+	     ( cat build/test/.ERROR; rm build/test/.ERROR ) \
+	else echo "\n[ALL TESTS PASSED]\n"; \
+	fi
+
+build/bin/% : build/obj/%.o $(OBJECTS) build/bin/.STAMP
 	$(CXX) $(LDFLAGS) $< $(OBJECTS) -o $@
 
-build/test/% : build/obj/%.o build/dep/%.d $(OBJECTS) build/test/.STAMP makefile
-	$(CXX) $(LDFLAGS) $< $(OBJECTS) -o $@
-
-build/obj/%.o : %.cpp build/dep/%.d build/obj/.STAMP
+build/obj/%.o : %.cpp build/obj/.STAMP build/dep/.STAMP
+	$(CXX) $(CXXFLAGS) -MM -MT '$@' $< > $(@:build/obj/%.o=build/dep/%.d)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-include $(BIN_NAMES:%=build/dep/%.d)
-include $(TEST_NAMES:%=build/dep/%.d)
-
-build/dep/%.d : %.cpp build/dep/.STAMP
-	@$(CXX) $(CXXFLAGS) -MM -MT '$@' $< > $@
+build/test/%.out : build/bin/% build/test/.STAMP
+	@if [ -e $@ ]; then \
+	( cp $@ $@.old; \
+          $< &> $@; \
+	  diff $@ $@.old >> build/test/.ERROR \
+	  || echo "REGRESSION TEST FAILED: $<" >> build/test/.ERROR \
+	  ; \
+	  rm $@.old ) \
+	else \
+	( $< &> $@; \
+          echo "WARNING: No regression test: $<" >> build/test/.ERROR ) \
+	fi
 
 %/.STAMP :
-	@mkdir -p $(@D)
+	@mkdir -pv $(@D)
 	@touch $@
 
 clean :
-	@rm -rf build/test build/bin build/dep build/obj
+	@rm -rf build/dep build/obj build/bin
+	@rm -f *~
+
+cleaner : clean
+	@rm -rf build
+
+-include $(wildcard build/dep/*.d)
 
