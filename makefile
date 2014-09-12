@@ -22,7 +22,7 @@ TEST_NAMES=cmdlp_test
 BIN_NAMES=$(PROG_NAMES) $(TEST_NAMES)
 
 # Object files are c++ sources that do not result in stand alone binaries
-OBJECTS=$((filter-out $(BIN_NAMES:%=%.cpp),$(wildcard *.cpp)):%.cpp=build/obj/%.o)
+OBJECTS=$(patsubst %.cpp,build/obj/%.o,$(filter-out $(BIN_NAMES:%=%.cpp),$(wildcard *.cpp)))
 
 
 #

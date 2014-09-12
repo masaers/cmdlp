@@ -26,7 +26,7 @@ namespace cmdlp {
   private:
     std::size_t count_m;
     parser* parser_ptr_m;
-  };
+  }; // option
   
   template<typename T>
   class option_crtp {
@@ -45,7 +45,7 @@ namespace cmdlp {
     std::string& desc() { return desc_m; }
   protected:
     std::string desc_m;
-  };
+  }; // option_crtp
   
   template<typename T>
   class value_option : public option, public option_crtp<value_option<T> > {
@@ -69,16 +69,19 @@ namespace cmdlp {
       ++option::count();
       return *this;
     }
-    template<typename U>
-    inline value_option& fallback(U&& value) {
+    template<typename U> inline value_option& fallback(U&& value) {
       *value_m = std::forward<U>(value);
       return fallback();
+    }
+    template<typename U> inline value_option& preset(U&& value) {
+      *value_m = std::forward<U>(value);
+      return *this;
     }
     const T& value() const { return *value_m; }
   private:
     T* value_m;
-  };
-
+  }; // value_option
+  
   template<>
   class value_option<bool> : public option, public option_crtp<value_option<bool> > {
   public:
@@ -92,7 +95,6 @@ namespace cmdlp {
       }
       option::observe();
     }
-    
     virtual bool need_arg() const { return false; }
     virtual void assign(const char* str) {}
     virtual void describe(std::ostream& os) const {
@@ -103,36 +105,13 @@ namespace cmdlp {
     }
   private:
     bool* value_m;
-  };
-  
+  }; // value_option<bool>
+
   class parser {
   public:
-    ~parser() {
-      using namespace std;
-      for (auto it = begin(options_m); it != end(options_m); ++it) {
-	delete *it;
-	*it = NULL;
-      }
-    }
+    ~parser();
     std::string usage() const { return std::string(); }
-    std::string help() const {
-      using namespace std;
-      ostringstream s;
-      for (auto it = begin(options_m); it != end(options_m); ++it) {
-	auto jt = bindings_m.find(*it);
-	if (jt != bindings_m.end()) {
-	  print_call(s, jt->second.first, jt->second.second, true);
-	} else {
-	  s << "n/n";
-	}
-	s << '=';
-	(**it).evaluate(s);
-	s << endl;
-	(**it).describe(s);
-	s << endl;
-      }
-      return s.str();
-    }
+    std::string help() const;
     std::string summary() const { return std::string(); }
     
     template<typename arg_it_T = null_output_iterator,
@@ -252,60 +231,18 @@ namespace cmdlp {
     void name(option* opt, const char flag) {
       bind(opt, flag);
     }
-    bool bind(option* opt, const char flag) {
-      auto p = flags_m.insert(std::make_pair(flag, opt));
-      if (! p.second) {
-	std::ostringstream s;
-	s << "Failed to bind option to flag '-" << flag << "'. "
-	  << "It already exists.";
-	throw std::runtime_error(s.str().c_str());
-      } else {
-	bindings_m[opt].second.push_back(flag);
-      }
-      return p.second;
-    }
+    bool bind(option* opt, const char flag);
     bool bind(option* opt, const char* const name) {
       return bind(opt, std::string(name));
     }
-    bool bind(option* opt, const std::string& name) {
-      auto p = names_m.insert(std::make_pair(name, opt));
-      if (! p.second) {
-	std::ostringstream s;
-	s << "Failed to bind option to name '--" << name << "'. "
-	  << "It already exists.";
-	throw std::runtime_error(s.str().c_str());
-      } else {
-	bindings_m[opt].first.push_back(name);
-      }
-      return p.second;
-    }
+    bool bind(option* opt, const std::string& name);
   private:
-    static void print_call(std::ostream& s, const std::vector<std::string>& names, std::vector<char> flags, bool print_all) {
-      using namespace std;
-      for (auto it = begin(names); it != end(names); ++it) {
-	if (it != begin(names)) {
-	  s << "|";
-	}
-	const auto pos = find(begin(flags), end(flags), it->front());
-	if (pos != end(flags)) {
-	  flags.erase(pos);
-	  s << "-[-" << it->front() << "]" << it->substr(1);
-	} else {
-	  s << "--" << *it;
-	}
-      }
-      for (auto it = begin(flags); it != end(flags); ++it) {
-	if (names.size() != 0 || it != begin(flags)) {
-	  s << "|";
-	}
-	s << "-" << *it;
-      }
-    }
+    static void print_call(std::ostream& s, const std::vector<std::string>& names, std::vector<char> flags, bool print_all);
     std::vector<option*> options_m;
     std::unordered_map<option*, std::pair<std::vector<std::string>, std::vector<char> > > bindings_m;
     std::unordered_map<char, option*> flags_m;
     std::unordered_map<std::string, option*> names_m;
-  };
+  }; // parser
   
   namespace options_helper {
     template<typename me_T, typename parser_T, typename T, typename... Ts>
@@ -354,11 +291,11 @@ namespace cmdlp {
 	// keep calm and continue as usual
       }
     }
-    bool help;
-    bool summarize;
+    bool help = false;
+    bool summarize = false;
   private:
     std::size_t error_count_m;
-  };
+  }; // options
   
   
 } // namespace cmdlp
