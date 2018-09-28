@@ -11,7 +11,6 @@ int main(const int argc, const char** argv) {
     .desc("The alpha value.")
     .name('a', "alpha")
     .name("ALPHA")
-    // .name('a')
     .fallback()
     ;
   p.add(cmdlp::value_option<bool>(flag))
