@@ -11,48 +11,50 @@
 namespace cmdlp {
   class parser;
 
-  class option {
+  class option_i {
   public:
-    virtual ~option() {}
+    virtual ~option_i() {}
     virtual bool need_arg() const = 0;
-    virtual void observe() { ++count_m; }
+    virtual void observe() = 0;
     virtual void assign(const char* str) = 0;
     virtual void describe(std::ostream& os) const = 0;
     virtual void evaluate(std::ostream& os) const = 0;
-    std::size_t& count() { return count_m; }
-    const std::size_t& count() const { return count_m; }
-    parser* const& parser_ptr() const { return parser_ptr_m; }
-    parser*& parser_ptr() { return parser_ptr_m; }
-  private:
-    std::size_t count_m;
-    parser* parser_ptr_m;
-  }; // option
+  }; // option_i
   
   template<typename T>
-  class option_crtp {
+  class option_crtp : public option_i {
+    inline T& me() { return static_cast<T&>(*this); }
+    inline const T& me() const { return static_cast<const T&>(*this); }
   public:
-    template<typename U>
-    T& desc(U&& str) {
+    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m("") {}
+    inline option_crtp(const option_crtp&) = default;
+    inline option_crtp(option_crtp&&) = default;
+    virtual ~option_crtp() {}
+    template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
+      return me();
+    }
+    template<typename... U> inline T& name(U&&... args) {
+      me().parser_ptr()->name(static_cast<option_i*>(&me()), std::forward<U>(args)...);
       return static_cast<T&>(*this);
     }
-    template<typename... U>
-    T& name(U&&... args) {
-      static_cast<T&>(*this).parser_ptr()->name(static_cast<option*>(static_cast<T*>(this)), std::forward<U>(args)...);
-      return static_cast<T&>(*this);
-    }
-    const std::string& desc() const { return desc_m; }
-    std::string& desc() { return desc_m; }
+    inline std::size_t& count() { return count_m; }
+    inline const std::size_t& count() const { return count_m; }
+    inline parser* const& parser_ptr() const { return parser_ptr_m; }
+    inline parser*& parser_ptr() { return parser_ptr_m; }
+    inline const std::string& desc() const { return desc_m; }
+    inline std::string& desc() { return desc_m; }
   protected:
+    std::size_t count_m;
+    parser* parser_ptr_m;
     std::string desc_m;
   }; // option_crtp
   
   template<typename T>
-  class value_option : public option, public option_crtp<value_option<T> > {
+  class value_option : public option_crtp<value_option<T> > {
+    typedef option_crtp<value_option<T> > base_class; 
   public:
-    value_option(T& value)
-      : option(), option_crtp<value_option<T> >(), value_m(&value)
-    {}
+    value_option(T& value) : option_crtp<value_option<T> >(), value_m(&value) {}
     virtual ~value_option() {}
     virtual void assign(const char* str) {
       if (str == NULL) {
@@ -65,14 +67,11 @@ namespace cmdlp {
       }
     }
     virtual bool need_arg() const { return true; }
-    virtual void describe(std::ostream& os) const {
-      os << this->desc();
-    }
-    virtual void evaluate(std::ostream& os) const {
-      os << *value_m;
-    }
+    virtual void observe() { ++base_class::count_m; }
+    virtual void describe(std::ostream& os) const { os << this->desc(); }
+    virtual void evaluate(std::ostream& os) const { os << *value_m; }
     inline value_option& fallback() {
-      ++option::count();
+      ++base_class::count();
       return *this;
     }
     template<typename U> inline value_option& fallback(U&& value) {
@@ -89,19 +88,18 @@ namespace cmdlp {
   }; // value_option
   
   template<>
-  class value_option<bool> : public option, public option_crtp<value_option<bool> > {
+  class value_option<bool> : public option_crtp<value_option<bool> > {
+    typedef option_crtp<value_option<bool> > base_class;
   public:
-    value_option(bool& value)
-    : option(), option_crtp<value_option<bool> >(), value_m(&value)
-    {}
+    value_option(bool& value): option_crtp<value_option<bool> >(), value_m(&value) {}
     virtual ~value_option() {}
+    virtual bool need_arg() const { return false; }
     virtual void observe() {
       if (this->count() == 0) {
         *value_m = ! *value_m;
       }
-      option::observe();
+      ++base_class::count();
     }
-    virtual bool need_arg() const { return false; }
     virtual void assign(const char* str) {}
     virtual void describe(std::ostream& os) const {
       os << this->desc();
@@ -151,27 +149,27 @@ namespace cmdlp {
       opt_ptr->parser_ptr() = this;
       return *opt_ptr;
     }
-    void name(option* opt, const char flag, const char* const name) {
+    void name(option_i* opt, const char flag, const char* const name) {
       bind(opt, flag);
       bind(opt, name);
     }
-    void name(option* opt, const char* const name) {
+    void name(option_i* opt, const char* const name) {
       bind(opt, name);
     }
-    void name(option* opt, const char flag) {
+    void name(option_i* opt, const char flag) {
       bind(opt, flag);
     }
-    bool bind(option* opt, const char flag);
-    bool bind(option* opt, const char* const name) {
+    bool bind(option_i* opt, const char flag);
+    bool bind(option_i* opt, const char* const name) {
       return bind(opt, std::string(name));
     }
-    bool bind(option* opt, const std::string& name);
+    bool bind(option_i* opt, const std::string& name);
   private:
     static void print_call(std::ostream& s, const std::vector<std::string>& names, std::vector<char> flags, bool print_all);
-    std::vector<option*> options_m;
-    std::unordered_map<option*, std::pair<std::vector<std::string>, std::vector<char> > > bindings_m;
-    std::unordered_map<char, option*> flags_m;
-    std::unordered_map<std::string, option*> names_m;
+    std::vector<option_i*> options_m;
+    std::unordered_map<option_i*, std::pair<std::vector<std::string>, std::vector<char> > > bindings_m;
+    std::unordered_map<char, option_i*> flags_m;
+    std::unordered_map<std::string, option_i*> names_m;
   }; // parser
   
   namespace options_helper {
@@ -224,7 +222,7 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
           ++first;
           auto it = names_m.find(i);
           if (it != names_m.end()) {
-            option* opt = it->second;
+            option_i* opt = it->second;
             opt->observe();
             if (opt->need_arg()) {
               try {
@@ -254,7 +252,7 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
             auto it = flags_m.find(*i);
             if (it != flags_m.end()) {
               ++i;
-              option* opt = it->second;
+              option_i* opt = it->second;
               opt->observe();
               if (opt->need_arg()) {
                 if (*i == '\0') {

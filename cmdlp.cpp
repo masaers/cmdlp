@@ -43,7 +43,7 @@ std::string cmdlp::parser::help() const {
   return s.str();
 }
 
-bool cmdlp::parser::bind(option* opt, const char flag) {
+bool cmdlp::parser::bind(option_i* opt, const char flag) {
   auto p = flags_m.insert(std::make_pair(flag, opt));
   if (! p.second) {
     std::ostringstream s;
@@ -56,7 +56,7 @@ bool cmdlp::parser::bind(option* opt, const char flag) {
   return p.second;
 }
 
-bool cmdlp::parser::bind(option* opt, const std::string& name) {
+bool cmdlp::parser::bind(option_i* opt, const std::string& name) {
   auto p = names_m.insert(std::make_pair(name, opt));
   if (! p.second) {
     std::ostringstream s;
