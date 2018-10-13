@@ -92,12 +92,12 @@ namespace cmdlp {
   class value_option<bool> : public option, public option_crtp<value_option<bool> > {
   public:
     value_option(bool& value)
-      : option(), option_crtp<value_option<bool> >(), value_m(&value)
+    : option(), option_crtp<value_option<bool> >(), value_m(&value)
     {}
     virtual ~value_option() {}
     virtual void observe() {
       if (this->count() == 0) {
-	*value_m = ! *value_m;
+        *value_m = ! *value_m;
       }
       option::observe();
     }
@@ -116,16 +116,15 @@ namespace cmdlp {
   class parser {
   public:
     ~parser();
-    std::string usage() const { return std::string(); }
+    std::string usage() const;
     std::string help() const;
     std::string summary() const { return std::string(); }
     
-    template<typename arg_it_T = null_output_iterator,
-	           typename error_it_T = null_output_iterator>
+    template<typename arg_it_T = null_output_iterator, typename erros_T = std::ostream&>
     std::size_t parse(const int argc,
                       const char** argv,
                       arg_it_T&& arg_it = arg_it_T(),
-                      error_it_T&& error_it = error_it_T()) const;
+                      erros_T&& erros = std::cerr) const;
 
     template<typename opt_T>
     typename std::decay<opt_T>::type& add(opt_T&& opt) {
@@ -159,54 +158,24 @@ namespace cmdlp {
   }; // parser
   
   namespace options_helper {
+    template<typename me_T, typename parser_T>
+    inline void init_bases(me_T&, parser_T&) {}
     template<typename me_T, typename parser_T, typename T, typename... Ts>
     inline void init_bases(me_T& me, parser_T& p) {
       static_cast<T&>(me).init(p);
-      init_bases<Ts...>(me, p);
+      init_bases<me_T, parser_T, Ts...>(me, p);
     }
-    template<typename me_T, typename parser_T>
-    inline void init_bases(me_T&, parser_T&) {}
   } // namespace options_helper
   
   template<typename... options_T>
   class options : public options_T... {
   public:
-    inline options(const int argc, const char** argv)
-      : options_T()...
-      , help(false)
-      , summarize(false)
-      , error_count_m(0)
-      {
-        initialize(argc, argv);
-      }
+    inline options(const int argc, const char** argv);
     inline options(const int argc, char** argv) : options(argc, (const char**)argv) {}
-    inline operator bool() const {
-      return error_count_m == 0;
-    }
-    inline void initialize(const int argc, const char** argv) {
-      using namespace std;
-      parser p;
-      options_helper::init_bases<options_T...>(*this, p);
-      p.add(value_option<bool>(help))
-      	.name('h', "help")
-      	.desc("Prints the help message and exits normally.")
-      	;
-      p.add(value_option<bool>(summarize))
-      	.name("summarize")
-      	.desc("Prints a summary of the parameters as undestood "
-      	      "by the program before running the program.")
-      	;
-      error_count_m = p.parse(argc, argv);
-      if (error_count_m != 0 || help) {
-        cerr << endl << p.usage() << endl << endl << p.help() << endl;
-      } if (summarize) {
-        cerr << endl << p.summary() << endl;
-      } else {
-	      // keep calm and continue as usual
-      }
-    }
+    inline operator bool() const { return error_count_m == 0; }
     bool help = false;
     bool summarize = false;
+    std::vector<std::string> args;
   private:
     std::size_t error_count_m;
   }; // options
@@ -215,8 +184,8 @@ namespace cmdlp {
 } // namespace cmdlp
 
 
-template<typename arg_it_T, typename error_it_T>
-std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it, error_it_T&& error_it) const {
+template<typename arg_it_T, typename erros_T>
+std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it, erros_T&& erros) const {
   static const char null_str = '\0';
   std::size_t error_count = 0;
   const char** first = argv;
@@ -244,17 +213,13 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
               try {
                 opt->assign(*first);
               } catch(const std::exception& e) {
-                *error_it = e.what();
-                ++error_it;
+                erros << e.what() << std::endl;
                 ++error_count;
               } // try
               ++first;
             } // if
           } else {
-            std::ostringstream s;
-            s << "Unknown command line parameter: '--" << i << "'.";
-            *error_it = s.str().c_str();
-            ++error_it;
+            erros << "Unknown command line parameter: '--" << i << "'." << std::endl;
             ++error_count;
           } // if
           i = *first;
@@ -286,17 +251,13 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
                 try {
                   opt->assign(i);
                 } catch (const std::exception& e) {
-                  *error_it = e.what();
-                  ++error_it;
+                  erros << e.what() << std::endl;
                   ++error_count;
                 } // try
                 i = &null_str;
               } // if
             } else {
-              std::ostringstream s;
-              s << "Unknown command line parameter: '-" << *i << "'.";
-              *error_it = s.str().c_str();
-              ++error_it;
+              erros << "Unknown command line parameter: '-" << *i << "'." << std::endl;
               ++error_count;
               ++i;
             } // if
@@ -315,6 +276,30 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
     } // if
   } // while
   return error_count;
+}
+
+template<typename... options_T> 
+cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
+  using namespace std;
+  parser p;
+  options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
+  p.add(value_option<bool>(help))
+  .name('h', "help")
+  .desc("Prints the help message and exits normally.")
+  ;
+  p.add(value_option<bool>(summarize))
+  .name("summarize")
+  .desc("Prints a summary of the parameters as undestood "
+    "by the program before running the program.")
+  ;
+  error_count_m = p.parse(argc, argv, back_inserter(args));
+  if (error_count_m != 0 || help) {
+    cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
+  } if (summarize) {
+    cerr << endl << p.summary() << endl;
+  } else {
+        // keep calm and continue as usual
+  }
 }
 
 #endif

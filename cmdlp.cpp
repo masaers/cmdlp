@@ -1,4 +1,5 @@
 #include "cmdlp.hpp"
+#include <sstream>
 
 cmdlp::parser::~parser() {
   using namespace std;
@@ -6,6 +7,21 @@ cmdlp::parser::~parser() {
     delete *it;
     *it = NULL;
   }
+}
+
+std::string cmdlp::parser::usage() const {
+  using namespace std;
+  ostringstream s;
+  for (const auto& o : options_m) {
+    auto it = bindings_m.find(o);
+    if (it != bindings_m.end()) {
+      s << ' ';
+      print_call(s, it->second.first, it->second.second, false);
+    } else {
+      s << " n/n";
+    }
+  }
+  return s.str();
 }
 
 std::string cmdlp::parser::help() const {
@@ -20,7 +36,7 @@ std::string cmdlp::parser::help() const {
     }
     s << '=';
     (**it).evaluate(s);
-    s << endl;
+    s << endl << "    ";
     (**it).describe(s);
     s << endl;
   }
