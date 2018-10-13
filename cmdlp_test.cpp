@@ -3,6 +3,7 @@
 
 struct local_options {
   int alpha;
+  int beta;
   bool flag;
   bool neg_flag;
   void init(cmdlp::parser& p) {
@@ -12,6 +13,11 @@ struct local_options {
     .name('a', "alpha")
     .name("ALPHA")
     .fallback()
+    ;
+    p.add(make_option(beta))
+    .desc("The beta value.")
+    .name('b', "beta")
+    .is_required()
     ;
     p.add(make_onswitch(flag))
     .desc("A flag.")

@@ -19,6 +19,7 @@ namespace cmdlp {
     virtual void assign(const char* str) = 0;
     virtual void describe(std::ostream& os) const = 0;
     virtual void evaluate(std::ostream& os) const = 0;
+    virtual bool validate() const = 0;
   }; // option_i
   
   template<typename T>
@@ -26,17 +27,24 @@ namespace cmdlp {
     inline T& me() { return static_cast<T&>(*this); }
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
-    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m("") {}
+    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), required_m(false) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
     virtual ~option_crtp() {}
+    virtual bool validate() const {
+      return ! (required() && count() == 0);
+    }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
       return me();
     }
     template<typename... U> inline T& name(U&&... args) {
       me().parser_ptr()->name(static_cast<option_i*>(&me()), std::forward<U>(args)...);
-      return static_cast<T&>(*this);
+      return me();
+    }
+    inline T& is_required() {
+      required_m = true;
+      return me();
     }
     inline std::size_t& count() { return count_m; }
     inline const std::size_t& count() const { return count_m; }
@@ -44,10 +52,13 @@ namespace cmdlp {
     inline parser*& parser_ptr() { return parser_ptr_m; }
     inline const std::string& desc() const { return desc_m; }
     inline std::string& desc() { return desc_m; }
+    inline const bool& required() const { return required_m; }
+    inline bool& required() { return required_m; }
   protected:
     std::size_t count_m;
     parser* parser_ptr_m;
     std::string desc_m;
+    bool required_m;
   }; // option_crtp
   
   template<typename T>
@@ -140,9 +151,11 @@ namespace cmdlp {
                       const char** argv,
                       arg_it_T&& arg_it = arg_it_T(),
                       erros_T&& erros = std::cerr) const;
+    template<typename erros_T = std::ostream&>
+    std::size_t validate(erros_T&& erros = std::cerr) const;
 
     template<typename opt_T>
-    typename std::decay<opt_T>::type& add(opt_T&& opt) {
+    inline typename std::decay<opt_T>::type& add(opt_T&& opt) {
       typedef typename std::decay<opt_T>::type opt_type;
       opt_type* opt_ptr = new opt_type(std::forward<opt_T>(opt));
       options_m.push_back(opt_ptr);
@@ -293,6 +306,25 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
   return error_count;
 }
 
+
+template<typename erros_T>
+std::size_t cmdlp::parser::validate(erros_T&& erros) const {
+  std::size_t result = 0;
+  for (const auto& opt : options_m) {
+    if (! opt->validate()) {
+      auto it = bindings_m.find(opt);
+      if (it != bindings_m.end()) {
+        erros << "Required option '";
+        print_call(erros, it->second.first, it->second.second, false);
+        erros << "' not set." << std::endl;
+        ++result;
+      }
+    }
+  }
+  return result;
+}
+
+
 template<typename... options_T> 
 cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
   using namespace std;
@@ -307,13 +339,14 @@ cmdlp::options<options_T...>::options(const int argc, const char** argv) : optio
   .desc("Prints a summary of the parameters as undestood "
     "by the program before running the program.")
   ;
-  error_count_m = p.parse(argc, argv, back_inserter(args));
+  error_count_m += p.parse(argc, argv, back_inserter(args));
+  error_count_m += p.validate();
   if (error_count_m != 0 || help) {
     cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
   } if (summarize) {
     cerr << endl << p.summary() << endl;
   } else {
-        // keep calm and continue as usual
+    // keep calm and continue as usual
   }
 }
 
