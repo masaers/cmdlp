@@ -43,6 +43,25 @@ std::string cmdlp::parser::help() const {
   return s.str();
 }
 
+std::string cmdlp::parser::summary() const {
+  using namespace std;
+  ostringstream s;
+  for (const auto& opt : options_m) {
+    auto it = bindings_m.find(opt);
+    if (it != bindings_m.end()) {
+      if (! it->second.first.empty()) {
+        s << it->second.first.front();
+      } else {
+        s << it->second.second.front();
+      }
+      s << '=';
+      opt->evaluate(s);
+      s << endl;
+    }
+  }
+  return s.str();
+}
+
 bool cmdlp::parser::bind(option_i* opt, const char flag) {
   auto p = flags_m.insert(std::make_pair(flag, opt));
   if (! p.second) {

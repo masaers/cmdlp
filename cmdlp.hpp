@@ -144,7 +144,7 @@ namespace cmdlp {
     ~parser();
     std::string usage() const;
     std::string help() const;
-    std::string summary() const { return std::string(); }
+    std::string summary() const;
     
     template<typename arg_it_T = null_output_iterator, typename erros_T = std::ostream&>
     std::size_t parse(const int argc,
