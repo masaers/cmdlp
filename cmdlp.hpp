@@ -113,6 +113,23 @@ namespace cmdlp {
     bool* value_m;
   }; // value_option<bool>
 
+  template<typename T>
+  inline value_option<T> make_option(T& value) {
+    return value_option<T>(value);
+  }
+  inline value_option<bool> make_switch(bool& value) {
+    value = false;
+    return value_option<bool>(value);
+  }
+  inline value_option<bool> make_onswitch(bool& value) {
+    value = false;
+    return value_option<bool>(value);
+  }
+  inline value_option<bool> make_offswitch(bool& value) {
+    value = true;
+    return value_option<bool>(value);
+  }
+
   class parser {
   public:
     ~parser();
