@@ -20,6 +20,7 @@ namespace cmdlp {
     virtual void describe(std::ostream& os) const = 0;
     virtual void evaluate(std::ostream& os) const = 0;
     virtual bool validate() const = 0;
+    virtual bool required() const = 0;
   }; // option_i
   
   template<typename T>
@@ -34,6 +35,7 @@ namespace cmdlp {
     virtual bool validate() const {
       return ! (required() && count() == 0);
     }
+    virtual bool required() const { return required_m; }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
       return me();
@@ -52,7 +54,6 @@ namespace cmdlp {
     inline parser*& parser_ptr() { return parser_ptr_m; }
     inline const std::string& desc() const { return desc_m; }
     inline std::string& desc() { return desc_m; }
-    inline const bool& required() const { return required_m; }
     inline bool& required() { return required_m; }
   protected:
     std::size_t count_m;
@@ -344,7 +345,7 @@ cmdlp::options<options_T...>::options(const int argc, const char** argv) : optio
   if (error_count_m != 0 || help) {
     cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
   } if (summarize) {
-    cerr << endl << p.summary() << endl;
+    cerr << p.summary();
   } else {
     // keep calm and continue as usual
   }

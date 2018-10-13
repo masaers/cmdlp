@@ -12,13 +12,13 @@ cmdlp::parser::~parser() {
 std::string cmdlp::parser::usage() const {
   using namespace std;
   ostringstream s;
-  for (const auto& o : options_m) {
-    auto it = bindings_m.find(o);
-    if (it != bindings_m.end()) {
-      s << ' ';
-      print_call(s, it->second.first, it->second.second, false);
-    } else {
-      s << " n/n";
+  for (const auto& opt : options_m) {
+    if (opt->required()) {
+      auto it = bindings_m.find(opt);
+      if (it != bindings_m.end()) {
+        s << ' ';
+        print_call(s, it->second.first, it->second.second, false);
+      }
     }
   }
   return s.str();
@@ -27,17 +27,17 @@ std::string cmdlp::parser::usage() const {
 std::string cmdlp::parser::help() const {
   using namespace std;
   ostringstream s;
-  for (auto it = begin(options_m); it != end(options_m); ++it) {
-    auto jt = bindings_m.find(*it);
-    if (jt != bindings_m.end()) {
-      print_call(s, jt->second.first, jt->second.second, true);
+  for (const auto& opt : options_m) {
+    auto it = bindings_m.find(opt);
+    if (it != bindings_m.end()) {
+      print_call(s, it->second.first, it->second.second, true);
     } else {
       s << "n/n";
-    }
+    }    
     s << '=';
-    (**it).evaluate(s);
+    opt->evaluate(s);
     s << endl << "    ";
-    (**it).describe(s);
+    opt->describe(s);
     s << endl;
   }
   return s.str();
@@ -54,10 +54,12 @@ std::string cmdlp::parser::summary() const {
       } else {
         s << it->second.second.front();
       }
-      s << '=';
-      opt->evaluate(s);
-      s << endl;
+    } else {
+      s << "<unnamed option>";
     }
+    s << '=';
+    opt->evaluate(s);
+    s << endl;
   }
   return s.str();
 }
