@@ -1,10 +1,12 @@
 #ifndef CMDLP_HPP
 #define CMDLP_HPP
 #include "util.hpp"
+// c++
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <functional>
 #include <vector>
 #include <deque>
 #include <list>
@@ -12,9 +14,39 @@
 #include <map>
 #include <unordered_set>
 #include <unordered_map>
+// c
+#include <cstring>
 
 namespace cmdlp {
   class parser;
+
+  template<typename T>
+  struct from_cstr {
+    inline void operator()(T& value, const char* cstr) const {
+      std::istringstream s(cstr);
+      if (s >> value) {
+      // Value successfully read
+      } else {
+        throw std::runtime_error("Failed to read value.");
+      }
+    }
+  };
+  template<>
+  struct from_cstr<std::string> {
+    inline void operator()(std::string& value, const char* cstr) const {
+      value = cstr;
+    }
+  };
+  template<>
+  struct from_cstr<bool> {
+    inline void operator()(bool& value, const char* cstr) const {
+      if (strcmp(cstr, "yes") == 0) {
+        value = true;
+      } else if (strcmp(cstr, "no") == 0) {
+        value = false;
+      }
+    }
+  };
 
   class option_i {
   public:
@@ -28,12 +60,13 @@ namespace cmdlp {
     virtual bool required() const = 0;
   }; // option_i
   
-  template<typename T>
+  template<typename T, typename Value>
   class option_crtp : public option_i {
     inline T& me() { return static_cast<T&>(*this); }
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
-    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), required_m(false) {}
+    typedef std::function<void(Value&, const char*)> read_func;
+    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), required_m(false), read_m(from_cstr<Value>()) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
     virtual ~option_crtp() {}
@@ -54,6 +87,10 @@ namespace cmdlp {
       required_m = true;
       return me();
     }
+    inline T& on_read(const read_func& read) {
+      read_m = read;
+      return me();
+    }
     inline std::size_t& count() { return count_m; }
     inline const std::size_t& count() const { return count_m; }
     inline parser* const& parser_ptr() const { return parser_ptr_m; }
@@ -62,28 +99,22 @@ namespace cmdlp {
     inline std::string& desc() { return desc_m; }
     inline bool& required() { return required_m; }
   protected:
+    const read_func& read() const { return read_m; }
     std::size_t count_m;
     parser* parser_ptr_m;
     std::string desc_m;
     bool required_m;
+    read_func read_m; 
   }; // option_crtp
   
   template<typename T>
-  class value_option : public option_crtp<value_option<T> > {
-    typedef option_crtp<value_option<T> > base_class; 
+  class value_option : public option_crtp<value_option<T>, T> {
+    typedef option_crtp<value_option<T>, T> base_class; 
   public:
-    value_option(T& value) : option_crtp<value_option<T> >(), value_m(&value) {}
+    value_option(T& value) : base_class(), value_m(&value) {}
     virtual ~value_option() {}
     virtual void assign(const char* str) {
-      if (str == NULL) {
-        throw std::runtime_error("Nothing to read value from!");
-      }
-      std::istringstream s(str);
-      if (s >> *value_m) {
-        // Value successfully read
-      } else {
-        throw std::runtime_error("Failed to read value.");
-      }
+      base_class::read()(*value_m, str);
     }
     virtual bool need_arg() const { return true; }
     virtual void describe(std::ostream& os) const { os << this->desc(); }
@@ -106,22 +137,15 @@ namespace cmdlp {
   }; // value_option
   
   template<typename Container>
-  class container_option : public option_crtp<container_option<Container> > {
-    typedef option_crtp<container_option<Container> > base_class;
+  class container_option : public option_crtp<container_option<Container>, typename Container::value_type> {
+    typedef option_crtp<container_option<Container>, typename Container::value_type> base_class;
   public:
     container_option(Container& container) : base_class(), container_m(&container) {}
     virtual ~container_option() {}
     virtual void assign(const char* str) {
-      if (str == nullptr) {
-        throw std::runtime_error("Expected a parameter, got an empty string.");
-      }
-      std::istringstream s(str);
       typename Container::value_type v;
-      if (s >> v) {
-        container_m->insert(container_m->end(), v);
-      } else {
-        throw std::runtime_error("Failed to read value.");
-      }
+      base_class::read()(v, str);
+      container_m->insert(container_m->end(), v);
     }
     virtual bool need_arg() const { return true; }
     virtual void describe(std::ostream& os) const { os << this->desc(); }
@@ -140,10 +164,10 @@ namespace cmdlp {
   }; // container_option
 
   template<>
-  class value_option<bool> : public option_crtp<value_option<bool> > {
-    typedef option_crtp<value_option<bool> > base_class;
+  class value_option<bool> : public option_crtp<value_option<bool>, bool> {
+    typedef option_crtp<value_option<bool>, bool> base_class;
   public:
-    value_option(bool& value, std::size_t max_count = -1): option_crtp<value_option<bool> >(), value_m(&value), max_count_m(max_count) {}
+    value_option(bool& value, std::size_t max_count = -1): base_class(), value_m(&value), max_count_m(max_count) {}
     virtual ~value_option() {}
     virtual bool need_arg() const { return false; }
     virtual void observe() {
@@ -353,13 +377,18 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
             option_i* opt = it->second;
             opt->observe();
             if (opt->need_arg()) {
-              try {
-                opt->assign(*first);
-              } catch(const std::exception& e) {
-                erros << e.what() << std::endl;
+              if (first != last) {
+                try {
+                  opt->assign(*first);
+                } catch(const std::exception& e) {
+                  erros << e.what() << std::endl;
+                  ++error_count;
+                } // try
+                ++first;
+              } else {
+                erros << "Attempted to read argument from empty string." << std::endl;
                 ++error_count;
-              } // try
-              ++first;
+              } // if
             } // if
           } else {
             erros << "Unknown command line parameter: '--" << i << "'." << std::endl;
@@ -386,17 +415,22 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
                 if (*i == '\0') {
                   ++first;
                   if (first == last) {
-                    i = NULL;
+                    i = nullptr;
                   } else {
                     i = *first;
                   }
                 } // if
-                try {
-                  opt->assign(i);
-                } catch (const std::exception& e) {
-                  erros << e.what() << std::endl;
+                if (i != nullptr) {
+                  try {
+                    opt->assign(i);
+                  } catch (const std::exception& e) {
+                    erros << e.what() << std::endl;
+                    ++error_count;
+                  } // try
+                } else {
+                  erros << "Attempted to read argument from empty string." << std::endl;
                   ++error_count;
-                } // try
+                }
                 i = &null_str;
               } // if
             } else {
