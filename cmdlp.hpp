@@ -159,6 +159,12 @@ namespace cmdlp {
     std::size_t max_count_m;
   }; // value_option<bool>
 
+  /**
+  The specialization of value_option for C strings is intentinally left undefined.
+  Use a proper C++ std::string instead! Take control of your memory!
+  */
+  template<> class value_option<char*>;
+  template<> class value_option<const char*>;
 
   /**
   Creates an option tied to the provided value.
