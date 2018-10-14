@@ -4,9 +4,14 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <unordered_map>
-#include <vector>
 #include <algorithm>
+#include <vector>
+#include <deque>
+#include <list>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
 
 namespace cmdlp {
   class parser;
@@ -172,6 +177,50 @@ namespace cmdlp {
   template<typename T>
   inline value_option<T> make_option(T& value) {
     return value_option<T>(value);
+  }
+  template<typename T, typename Alloc>
+  inline container_option<std::vector<T, Alloc> > make_option(std::vector<T, Alloc>& container) {
+    return container_option<std::vector<T, Alloc> >(container);
+  }
+  template<typename T, typename Alloc>
+  inline container_option<std::deque<T, Alloc> > make_option(std::deque<T, Alloc>& container) {
+    return container_option<std::deque<T, Alloc> >(container);
+  }
+  template<typename T, typename Alloc>
+  inline container_option<std::list<T, Alloc> > make_option(std::list<T, Alloc>& container) {
+    return container_option<std::list<T, Alloc> >(container);
+  }
+  template<typename Key, typename Comp, typename Alloc>
+  inline container_option<std::set<Key, Comp, Alloc> > make_option(std::set<Key, Comp, Alloc>& container) {
+    return container_option<std::set<Key, Comp, Alloc> >(container);
+  }
+  template<typename Key, typename Comp, typename Alloc>
+  inline container_option<std::multiset<Key, Comp, Alloc> > make_option(std::multiset<Key, Comp, Alloc>& container) {
+    return container_option<std::multiset<Key, Comp, Alloc> >(container);
+  }
+  template<typename Key, typename Value, typename Comp, typename Alloc>
+  inline container_option<std::map<Key, Value, Comp, Alloc> > make_option(std::map<Key, Value, Comp, Alloc>& container) {
+    return container_option<std::map<Key, Value, Comp, Alloc> >(container);
+  }
+  template<typename Key, typename Value, typename Comp, typename Alloc>
+  inline container_option<std::multimap<Key, Value, Comp, Alloc> > make_option(std::multimap<Key, Value, Comp, Alloc>& container) {
+    return container_option<std::multimap<Key, Value, Comp, Alloc> >(container);
+  }
+  template<typename Key, typename Hash, typename Eq, typename Alloc>
+  inline container_option<std::unordered_set<Key, Hash, Eq, Alloc> > make_option(std::unordered_set<Key, Hash, Eq, Alloc>& container) {
+    return container_option<std::unordered_set<Key, Hash, Eq, Alloc> >(container);
+  }
+  template<typename Key, typename Hash, typename Eq, typename Alloc>
+  inline container_option<std::unordered_multiset<Key, Hash, Eq, Alloc> > make_option(std::unordered_multiset<Key, Hash, Eq, Alloc>& container) {
+    return container_option<std::unordered_multiset<Key, Hash, Eq, Alloc> >(container);
+  }
+  template<typename Key, typename Value, typename  Hash, typename Eq, typename Alloc>
+  inline container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc> > make_option(std::unordered_map<Key, Value, Hash, Eq, Alloc>& container) {
+    return container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc> >(container);
+  }
+  template<typename Key, typename Value, typename  Hash, typename Eq, typename Alloc>
+  inline container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc> > make_option(std::unordered_multimap<Key, Value, Hash, Eq, Alloc>& container) {
+    return container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc> >(container);
   }
 
 
