@@ -173,7 +173,8 @@ namespace cmdlp {
   inline value_option<T> make_option(T& value) {
     return value_option<T>(value);
   }
-  
+
+
   /**
   A switch option flips a Boolean every time it is given.
   */
@@ -193,6 +194,14 @@ namespace cmdlp {
   inline value_option<bool> make_offswitch(bool& value) {
     value = true;
     return value_option<bool>(value, 1);
+  }
+
+  /**
+  Inserts values to a container everytime the option is set.
+  */
+  template<typename Container>
+  inline container_option<Container> make_container_option(Container& container) {
+    return container_option<Container>(container);
   }
 
 
