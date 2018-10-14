@@ -138,11 +138,11 @@ namespace cmdlp {
   class value_option<bool> : public option_crtp<value_option<bool> > {
     typedef option_crtp<value_option<bool> > base_class;
   public:
-    value_option(bool& value): option_crtp<value_option<bool> >(), value_m(&value) {}
+    value_option(bool& value, std::size_t max_count = -1): option_crtp<value_option<bool> >(), value_m(&value), max_count_m(max_count) {}
     virtual ~value_option() {}
     virtual bool need_arg() const { return false; }
     virtual void observe() {
-      if (this->count() == 0) {
+      if (this->count() < max_count_m) {
         *value_m = ! *value_m;
       }
       base_class::observe();
@@ -156,24 +156,39 @@ namespace cmdlp {
     }
   private:
     bool* value_m;
+    std::size_t max_count_m;
   }; // value_option<bool>
 
+
+  /**
+  Creates an option tied to the provided value.
+  */
   template<typename T>
   inline value_option<T> make_option(T& value) {
     return value_option<T>(value);
   }
+  
+  /**
+  A switch option flips a Boolean every time it is given.
+  */
   inline value_option<bool> make_switch(bool& value) {
-    value = false;
-    return value_option<bool>(value);
+    return value_option<bool>(value, -1);
   }
+  /**
+  An on-switch "turns on" a Boolean (false -> true) when flipped (regardless of how many times).
+  */
   inline value_option<bool> make_onswitch(bool& value) {
     value = false;
-    return value_option<bool>(value);
+    return value_option<bool>(value, 1);
   }
+  /**
+  An off-switch "turns off" a Boolean (true -> false) when flipped (regardless of how many times).
+  */
   inline value_option<bool> make_offswitch(bool& value) {
     value = true;
-    return value_option<bool>(value);
+    return value_option<bool>(value, 1);
   }
+
 
   class parser {
   public:
