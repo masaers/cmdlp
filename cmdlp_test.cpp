@@ -34,7 +34,7 @@ struct local_options {
     .name('F')
     .name("FLAG")
     ;
-    p.add(container_option<std::set<std::string> >(strings))
+    p.add(make_option(strings))
     .desc("Some input strings")
     .name('s', "str")
     ;
