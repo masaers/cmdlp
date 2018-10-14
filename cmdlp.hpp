@@ -35,6 +35,7 @@ namespace cmdlp {
     virtual bool validate() const {
       return ! (required() && count() == 0);
     }
+    virtual void observe() { ++count_m; }
     virtual bool required() const { return required_m; }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
@@ -74,12 +75,12 @@ namespace cmdlp {
       }
       std::istringstream s(str);
       if (s >> *value_m) {
+        // Value successfully read
       } else {
         throw std::runtime_error("Failed to read value.");
       }
     }
     virtual bool need_arg() const { return true; }
-    virtual void observe() { ++base_class::count_m; }
     virtual void describe(std::ostream& os) const { os << this->desc(); }
     virtual void evaluate(std::ostream& os) const { os << *value_m; }
     inline value_option& fallback() {
@@ -99,6 +100,40 @@ namespace cmdlp {
     T* value_m;
   }; // value_option
   
+  template<typename Container>
+  class container_option : public option_crtp<container_option<Container> > {
+    typedef option_crtp<container_option<Container> > base_class;
+  public:
+    container_option(Container& container) : base_class(), container_m(&container) {}
+    virtual ~container_option() {}
+    virtual void assign(const char* str) {
+      if (str == nullptr) {
+        throw std::runtime_error("Expected a parameter, got an empty string.");
+      }
+      std::istringstream s(str);
+      typename Container::value_type v;
+      if (s >> v) {
+        container_m->insert(container_m->end(), v);
+      } else {
+        throw std::runtime_error("Failed to read value.");
+      }
+    }
+    virtual bool need_arg() const { return true; }
+    virtual void describe(std::ostream& os) const { os << this->desc(); }
+    virtual void evaluate(std::ostream& os) const {
+      os << '[';
+      for (auto it = container_m->begin(); it != container_m->end(); ++it) {
+        if (it != container_m->begin()) {
+          os << ',';
+        }
+        os << *it;
+      }
+      os << ']';
+    }
+  private:
+    Container* container_m;
+  }; // container_option
+
   template<>
   class value_option<bool> : public option_crtp<value_option<bool> > {
     typedef option_crtp<value_option<bool> > base_class;
@@ -110,7 +145,7 @@ namespace cmdlp {
       if (this->count() == 0) {
         *value_m = ! *value_m;
       }
-      ++base_class::count();
+      base_class::observe();
     }
     virtual void assign(const char* str) {}
     virtual void describe(std::ostream& os) const {

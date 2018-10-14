@@ -1,11 +1,15 @@
 #include "cmdlp.hpp"
 #include <iostream>
+#include <vector>
+#include <set>
 
 struct local_options {
   int alpha;
   int beta;
   bool flag;
   bool neg_flag;
+  std::set<std::string> strings;
+
   void init(cmdlp::parser& p) {
     using namespace cmdlp;
     p.add(make_option(alpha))
@@ -29,6 +33,10 @@ struct local_options {
     .name("neg_flag")
     .name('F')
     .name("FLAG")
+    ;
+    p.add(container_option<std::set<std::string> >(strings))
+    .desc("Some input strings")
+    .name('s', "str")
     ;
     return;
   }
