@@ -37,9 +37,10 @@ struct local_options {
   bool off;
   std::set<std::string> strings;
   std::vector<std::string> cipher;
-
-  void init(cmdlp::parser& p) {
-    using namespace cmdlp;
+  com::masaers::cmdlp::config_files configs;
+  // const char* cstr;
+  void init(com::masaers::cmdlp::parser& p) {
+    using namespace com::masaers::cmdlp;
     p.add(make_option(alpha))
     .desc("The alpha value.")
     .name('a', "alpha")
@@ -58,10 +59,15 @@ struct local_options {
     .desc("Some input strings")
     .name('s', "str")
     ;
+    // p.add(make_option(cstr)).desc("C-strings are bad, mmmkay.").name("cstr");
     p.add(make_option(cipher))
     .desc("Encrypts the provided strings.")
     .name("cipher")
     .on_read(robber_lang)
+    ;
+    p.add(make_option(configs))
+    .desc("Just put parameters in a file instead!")
+    .name("config")
     ;
     return;
   }
@@ -69,7 +75,7 @@ struct local_options {
 
 int main(const int argc, const char** argv) {
   using namespace std;
-  cmdlp::options<local_options> o(argc, argv);
+  com::masaers::cmdlp::options<local_options> o(argc, argv);
   if (! o) {
     return EXIT_FAILURE;
   } else if (o.help) {
