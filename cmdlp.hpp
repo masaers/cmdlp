@@ -17,7 +17,7 @@
 // c
 #include <cstring>
 
-namespace cmdlp {
+namespace com { namespace masaers { namespace cmdlp {
   class parser;
 
   class config_files {
@@ -30,7 +30,7 @@ namespace cmdlp {
   private:
     std::vector<std::string> filenames_m;
   }; // config_files
-  
+
   template<typename T>
   struct from_cstr {
     inline void operator()(T& value, const char* cstr) const {
@@ -126,7 +126,7 @@ namespace cmdlp {
   
   template<typename T>
   class value_option : public option_crtp<value_option<T>, T> {
-    typedef option_crtp<value_option<T>, T> base_class; 
+    typedef option_crtp<value_option<T>, T> base_class;
   public:
     value_option(T& value) : base_class(), value_m(&value) {}
     virtual ~value_option() {}
@@ -376,11 +376,11 @@ namespace cmdlp {
   }; // options
   
   
-} // namespace cmdlp
+} } } // namespace com::masaers::cmdlp
 
 
 template<typename arg_it_T>
-std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it) const {
+std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it) const {
   static const char null_str = '\0';
   std::size_t error_count = 0;
   const char** first = argv;
@@ -486,7 +486,7 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
 
 
 template<typename... options_T> 
-cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
+com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
   using namespace std;
   parser p(std::cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);

@@ -2,12 +2,12 @@
 #include <sstream>
 #include <fstream>
 
-void cmdlp::value_option<cmdlp::config_files>::assign(const char* str) {
+void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::assign(const char* str) {
   base_class::read()(*config_files_m, str);
   error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
 }
 
-void cmdlp::value_option<cmdlp::config_files>::evaluate(std::ostream& os) const {
+void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::evaluate(std::ostream& os) const {
   const auto& fns = config_files_m->filenames();
   os << '[';
   for (auto it = fns.begin(); it != fns.end(); ++it) {
@@ -19,7 +19,7 @@ void cmdlp::value_option<cmdlp::config_files>::evaluate(std::ostream& os) const 
   os << ']';
 }
 
-cmdlp::parser::~parser() {
+com::masaers::cmdlp::parser::~parser() {
   using namespace std;
   for (auto it = begin(options_m); it != end(options_m); ++it) {
     delete *it;
@@ -27,7 +27,7 @@ cmdlp::parser::~parser() {
   }
 }
 
-std::string cmdlp::parser::usage() const {
+std::string com::masaers::cmdlp::parser::usage() const {
   using namespace std;
   ostringstream s;
   for (const auto& opt : options_m) {
@@ -42,7 +42,7 @@ std::string cmdlp::parser::usage() const {
   return s.str();
 }
 
-std::string cmdlp::parser::help() const {
+std::string com::masaers::cmdlp::parser::help() const {
   using namespace std;
   ostringstream s;
   for (const auto& opt : options_m) {
@@ -61,7 +61,7 @@ std::string cmdlp::parser::help() const {
   return s.str();
 }
 
-std::string cmdlp::parser::summary() const {
+std::string com::masaers::cmdlp::parser::summary() const {
   using namespace std;
   ostringstream s;
   for (const auto& opt : options_m) {
@@ -82,7 +82,7 @@ std::string cmdlp::parser::summary() const {
   return s.str();
 }
 
-bool cmdlp::parser::bind(option_i* opt, const char flag) {
+bool com::masaers::cmdlp::parser::bind(option_i* opt, const char flag) {
   auto p = flags_m.insert(std::make_pair(flag, opt));
   if (! p.second) {
     std::ostringstream s;
@@ -95,7 +95,7 @@ bool cmdlp::parser::bind(option_i* opt, const char flag) {
   return p.second;
 }
 
-bool cmdlp::parser::bind(option_i* opt, const std::string& name) {
+bool com::masaers::cmdlp::parser::bind(option_i* opt, const std::string& name) {
   auto p = names_m.insert(std::make_pair(name, opt));
   if (! p.second) {
     std::ostringstream s;
@@ -108,7 +108,7 @@ bool cmdlp::parser::bind(option_i* opt, const std::string& name) {
   return p.second;
 }
 
-void cmdlp::parser::print_call(std::ostream& s, const std::vector<std::string>& names, std::vector<char> flags, bool print_all) {
+void com::masaers::cmdlp::parser::print_call(std::ostream& s, const std::vector<std::string>& names, std::vector<char> flags, bool print_all) {
   using namespace std;
   for (auto it = begin(names); it != end(names); ++it) {
     if (it != begin(names)) {
@@ -158,7 +158,7 @@ static bool unescape(const char* first, std::string& out) {
   return result;
 }
 
-std::size_t cmdlp::parser::parse_file(const char* filename) const {
+std::size_t com::masaers::cmdlp::parser::parse_file(const char* filename) const {
   using namespace std;
   size_t error_count = 0;
   ifstream ifs(filename);
@@ -186,7 +186,7 @@ std::size_t cmdlp::parser::parse_file(const char* filename) const {
   return error_count;
 }
 
-std::size_t cmdlp::parser::validate() const {
+std::size_t com::masaers::cmdlp::parser::validate() const {
   std::size_t result = 0;
   for (const auto& opt : options_m) {
     if (! opt->validate()) {
