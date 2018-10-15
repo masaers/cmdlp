@@ -1,5 +1,23 @@
 #include "cmdlp.hpp"
 #include <sstream>
+#include <fstream>
+
+void cmdlp::value_option<cmdlp::config_files>::assign(const char* str) {
+  base_class::read()(*config_files_m, str);
+  error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
+}
+
+void cmdlp::value_option<cmdlp::config_files>::evaluate(std::ostream& os) const {
+  const auto& fns = config_files_m->filenames();
+  os << '[';
+  for (auto it = fns.begin(); it != fns.end(); ++it) {
+    if (it != fns.begin()) {
+      os << ',';
+    }
+    os << *it;
+  }
+  os << ']';
+}
 
 cmdlp::parser::~parser() {
   using namespace std;
@@ -112,3 +130,74 @@ void cmdlp::parser::print_call(std::ostream& s, const std::vector<std::string>& 
   }
 }
 
+static bool unescape(const char* first, std::string& out) {
+  bool result = true;
+  if (*first != '\0') {
+    char quote = ' ';
+    if (*first == '\'' || *first == '"') {
+      quote = *first++;
+    }
+    for (; result && *first != '\0' && *first != quote; ++first) {
+      if (*first == '\\') {
+        ++first;
+        if (*first != '\0') {
+          out.push_back(*first);
+        } else {
+          result = false;
+        }
+      } else {
+        out.push_back(*first);
+      }
+    }
+    switch (quote) {
+      case ' ':            result = result && (*first == ' ' || *first == '\0'); break;
+      case '\'': case '"': result = result &&  *first == quote                 ; break;
+      default:             result = false;
+    }
+  }
+  return result;
+}
+
+std::size_t cmdlp::parser::parse_file(const char* filename) const {
+  using namespace std;
+  size_t error_count = 0;
+  ifstream ifs(filename);
+  if (ifs) {
+    for (std::string line; getline(ifs, line); ) {
+      const auto sep = line.find('=');
+      const auto it = names_m.find(line.substr(0, sep));
+      if (it != names_m.end()) {
+        option_i* opt = it->second;
+        opt->observe();
+        try {
+          string unesc;
+          unescape(line.c_str() + sep + 1, unesc);
+          opt->assign(unesc.c_str());
+        } catch(const std::exception& e) {
+          *erros_m << e.what() << std::endl;
+          ++error_count;
+        } // try
+      }
+    }
+  } else {
+    *erros_m << "Failed to open file: '" << filename << "'" << endl;
+    ++error_count;
+  }
+  return error_count;
+}
+
+std::size_t cmdlp::parser::validate() const {
+  std::size_t result = 0;
+  for (const auto& opt : options_m) {
+    if (! opt->validate()) {
+      auto it = bindings_m.find(opt);
+      if (it != bindings_m.end()) {
+        *erros_m << "Required option '";
+        print_call(*erros_m, it->second.first, it->second.second, false);
+        *erros_m << "' not set." << std::endl;
+        ++result;
+      }
+    }
+  }
+  return result;
+}

@@ -37,6 +37,7 @@ struct local_options {
   bool off;
   std::set<std::string> strings;
   std::vector<std::string> cipher;
+  cmdlp::config_files configs;
 
   void init(cmdlp::parser& p) {
     using namespace cmdlp;
@@ -62,6 +63,10 @@ struct local_options {
     .desc("Encrypts the provided strings.")
     .name("cipher")
     .on_read(robber_lang)
+    ;
+    p.add(make_option(configs))
+    .desc("Just put parameters in a file instead!")
+    .name("config")
     ;
     return;
   }

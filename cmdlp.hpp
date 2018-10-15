@@ -20,6 +20,17 @@
 namespace cmdlp {
   class parser;
 
+  class config_files {
+  public:
+    config_files() = default;
+    config_files(const config_files&) = default;
+    config_files(config_files&&) = default;
+    inline std::vector<std::string>& filenames() { return filenames_m; }
+    inline const std::vector<std::string>& filenames() const { return filenames_m; }
+  private:
+    std::vector<std::string> filenames_m;
+  }; // config_files
+  
   template<typename T>
   struct from_cstr {
     inline void operator()(T& value, const char* cstr) const {
@@ -40,11 +51,17 @@ namespace cmdlp {
   template<>
   struct from_cstr<bool> {
     inline void operator()(bool& value, const char* cstr) const {
-      if (strcmp(cstr, "yes") == 0) {
+      if (strcmp(cstr, "yes") == 0 || strcmp(cstr, "true") == 0) {
         value = true;
-      } else if (strcmp(cstr, "no") == 0) {
+      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0) {
         value = false;
       }
+    }
+  };
+  template<>
+  struct from_cstr<config_files> {
+    inline void operator()(config_files& value, const char* cstr) const {
+      value.filenames().emplace_back(cstr);
     }
   };
 
@@ -70,10 +87,10 @@ namespace cmdlp {
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
     virtual ~option_crtp() {}
-    virtual bool validate() const {
-      return ! (required() && count() == 0);
-    }
+    virtual bool need_arg() const { return true; }
     virtual void observe() { ++count_m; }
+    virtual void describe(std::ostream& os) const { os << desc_m; }
+    virtual bool validate() const { return ! (required() && count() == 0); }
     virtual bool required() const { return required_m; }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
@@ -116,8 +133,6 @@ namespace cmdlp {
     virtual void assign(const char* str) {
       base_class::read()(*value_m, str);
     }
-    virtual bool need_arg() const { return true; }
-    virtual void describe(std::ostream& os) const { os << this->desc(); }
     virtual void evaluate(std::ostream& os) const { os << *value_m; }
     inline value_option& fallback() {
       ++base_class::count();
@@ -147,8 +162,6 @@ namespace cmdlp {
       base_class::read()(v, str);
       container_m->insert(container_m->end(), v);
     }
-    virtual bool need_arg() const { return true; }
-    virtual void describe(std::ostream& os) const { os << this->desc(); }
     virtual void evaluate(std::ostream& os) const {
       os << '[';
       for (auto it = container_m->begin(); it != container_m->end(); ++it) {
@@ -176,10 +189,10 @@ namespace cmdlp {
       }
       base_class::observe();
     }
-    virtual void assign(const char* str) {}
-    virtual void describe(std::ostream& os) const {
-      os << this->desc();
+    virtual void assign(const char* str) {
+      base_class::read()(*value_m, str);
     }
+    // virtual void assign(const char* str) {}
     virtual void evaluate(std::ostream& os) const {
       os << (*value_m ? "yes" : "no");
     }
@@ -187,6 +200,19 @@ namespace cmdlp {
     bool* value_m;
     std::size_t max_count_m;
   }; // value_option<bool>
+
+  template<>
+  class value_option<config_files> : public option_crtp<value_option<config_files>, config_files> {
+    typedef option_crtp<value_option<config_files>, config_files> base_class;
+  public:
+    value_option(config_files& config_files) : base_class(), config_files_m(&config_files), error_count_m(0) {}
+    virtual ~value_option() {}
+    virtual void assign(const char* str);
+    virtual void evaluate(std::ostream& os) const;
+  private:
+    config_files* config_files_m;
+    std::size_t error_count_m;
+  }; // value_option<config_files>
 
   /**
   The specialization of value_option for C strings is intentinally left undefined.
@@ -280,18 +306,19 @@ namespace cmdlp {
 
   class parser {
   public:
+    parser() : options_m(), bindings_m(), flags_m(), names_m(), erros_m(&std::cerr) {}
+    parser(std::ostream& erros) : options_m(), bindings_m(), flags_m(), names_m(), erros_m(&erros) {}
     ~parser();
     std::string usage() const;
     std::string help() const;
     std::string summary() const;
     
-    template<typename arg_it_T = null_output_iterator, typename erros_T = std::ostream&>
+    template<typename arg_it_T = null_output_iterator>
     std::size_t parse(const int argc,
                       const char** argv,
-                      arg_it_T&& arg_it = arg_it_T(),
-                      erros_T&& erros = std::cerr) const;
-    template<typename erros_T = std::ostream&>
-    std::size_t validate(erros_T&& erros = std::cerr) const;
+                      arg_it_T&& arg_it = arg_it_T()) const;
+    std::size_t parse_file(const char* filename) const;
+    std::size_t validate() const;
 
     template<typename opt_T>
     inline typename std::decay<opt_T>::type& add(opt_T&& opt) {
@@ -322,6 +349,7 @@ namespace cmdlp {
     std::unordered_map<option_i*, std::pair<std::vector<std::string>, std::vector<char> > > bindings_m;
     std::unordered_map<char, option_i*> flags_m;
     std::unordered_map<std::string, option_i*> names_m;
+    std::ostream* erros_m;
   }; // parser
   
   namespace options_helper {
@@ -351,8 +379,8 @@ namespace cmdlp {
 } // namespace cmdlp
 
 
-template<typename arg_it_T, typename erros_T>
-std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it, erros_T&& erros) const {
+template<typename arg_it_T>
+std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it) const {
   static const char null_str = '\0';
   std::size_t error_count = 0;
   const char** first = argv;
@@ -381,17 +409,17 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
                 try {
                   opt->assign(*first);
                 } catch(const std::exception& e) {
-                  erros << e.what() << std::endl;
+                  *erros_m << e.what() << std::endl;
                   ++error_count;
                 } // try
                 ++first;
               } else {
-                erros << "Attempted to read argument from empty string." << std::endl;
+                *erros_m << "Attempted to read argument from empty string." << std::endl;
                 ++error_count;
               } // if
             } // if
           } else {
-            erros << "Unknown command line parameter: '--" << i << "'." << std::endl;
+            *erros_m << "Unknown command line parameter: '--" << i << "'." << std::endl;
             ++error_count;
           } // if
           i = *first;
@@ -424,17 +452,17 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
                   try {
                     opt->assign(i);
                   } catch (const std::exception& e) {
-                    erros << e.what() << std::endl;
+                    *erros_m << e.what() << std::endl;
                     ++error_count;
                   } // try
                 } else {
-                  erros << "Attempted to read argument from empty string." << std::endl;
+                  *erros_m << "Attempted to read argument from empty string." << std::endl;
                   ++error_count;
                 }
                 i = &null_str;
               } // if
             } else {
-              erros << "Unknown command line parameter: '-" << *i << "'." << std::endl;
+              *erros_m << "Unknown command line parameter: '-" << *i << "'." << std::endl;
               ++error_count;
               ++i;
             } // if
@@ -456,28 +484,11 @@ std::size_t cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& a
 }
 
 
-template<typename erros_T>
-std::size_t cmdlp::parser::validate(erros_T&& erros) const {
-  std::size_t result = 0;
-  for (const auto& opt : options_m) {
-    if (! opt->validate()) {
-      auto it = bindings_m.find(opt);
-      if (it != bindings_m.end()) {
-        erros << "Required option '";
-        print_call(erros, it->second.first, it->second.second, false);
-        erros << "' not set." << std::endl;
-        ++result;
-      }
-    }
-  }
-  return result;
-}
-
 
 template<typename... options_T> 
 cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
   using namespace std;
-  parser p;
+  parser p(std::cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
   p.add(value_option<bool>(help))
   .name('h', "help")
