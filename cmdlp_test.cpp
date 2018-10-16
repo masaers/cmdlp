@@ -37,6 +37,7 @@ struct local_options {
   bool off;
   std::set<std::string> strings;
   std::vector<std::string> cipher;
+  std::map<std::string, float> constants;
   com::masaers::cmdlp::config_files configs;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
@@ -64,6 +65,10 @@ struct local_options {
     .desc("Encrypts the provided strings.")
     .name("cipher")
     .on_read(robber_lang)
+    ;
+    p.add(make_option(constants))
+    .desc("Named numeric constants.")
+    .name('c', "const")
     ;
     p.add(make_option(configs))
     .desc("Just put parameters in a file instead!")
