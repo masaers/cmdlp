@@ -20,6 +20,16 @@
 namespace com { namespace masaers { namespace cmdlp {
   class parser;
 
+  const char* unescape_until(const char* first, const char last, std::string& out);
+  
+  inline const char* unescape(const char* first, std::string& out) {
+    return unescape_until(first, '\0', out);
+  }
+
+
+  /**
+  Use an object of this class as the config-file options.
+  */
   class config_files {
   public:
     config_files() = default;
@@ -30,6 +40,7 @@ namespace com { namespace masaers { namespace cmdlp {
   private:
     std::vector<std::string> filenames_m;
   }; // config_files
+
 
   template<typename T>
   struct from_cstr {
@@ -64,6 +75,43 @@ namespace com { namespace masaers { namespace cmdlp {
       value.filenames().emplace_back(cstr);
     }
   };
+  template<typename Key, typename Value>
+  struct from_cstr<std::pair<Key, Value> > {
+    inline void operator()(std::pair<Key, Value>& kv, const char* cstr) const {
+      std::string key;
+      const char* div = unescape_until(cstr + 1, cstr[0], key);
+      if (div != nullptr && *div == cstr[0]) {
+        std::string value;
+        const char* end = unescape(div + 1, value);
+        if (end != nullptr && *end == '\0') {
+          from_cstr<Key>()(kv.first, key.c_str());
+          from_cstr<Value>()(kv.second, value.c_str());
+        } else {
+          throw std::runtime_error("Failed to read value in key value pair.");
+        }
+      } else {
+        throw std::runtime_error("Failed to read key in key value pair.");
+      }
+    }
+  };
+
+
+  template<typename Value>
+  struct to_stream {
+    inline void operator()(const Value& value, std::ostream& out) const {
+      out << value;
+    }
+  };
+  template<typename Key, typename Value>
+  struct to_stream<std::pair<Key, Value> > {
+    inline void operator()(const std::pair<Key, Value>& kv, std::ostream& out) const {
+      out << ':';
+      to_stream<typename std::decay<Key>::type>()(kv.first, out);
+      out << ':';
+      to_stream<typename std::decay<Value>::type>()(kv.second, out);
+    }
+  };
+
 
   class option_i {
   public:
@@ -151,14 +199,14 @@ namespace com { namespace masaers { namespace cmdlp {
     T* value_m;
   }; // value_option
   
-  template<typename Container>
-  class container_option : public option_crtp<container_option<Container>, typename Container::value_type> {
-    typedef option_crtp<container_option<Container>, typename Container::value_type> base_class;
+  template<typename Container, typename T = typename Container::value_type>
+  class container_option : public option_crtp<container_option<Container, T>, T> {
+    typedef option_crtp<container_option<Container, T>, T> base_class;
   public:
     container_option(Container& container) : base_class(), container_m(&container) {}
     virtual ~container_option() {}
     virtual void assign(const char* str) {
-      typename Container::value_type v;
+      T v;
       base_class::read()(v, str);
       container_m->insert(container_m->end(), v);
     }
@@ -168,7 +216,7 @@ namespace com { namespace masaers { namespace cmdlp {
         if (it != container_m->begin()) {
           os << ',';
         }
-        os << *it;
+        to_stream<typename Container::value_type>()(*it, os); // os << *it;
       }
       os << ']';
     }
@@ -249,12 +297,12 @@ namespace com { namespace masaers { namespace cmdlp {
     return container_option<std::multiset<Key, Comp, Alloc> >(container);
   }
   template<typename Key, typename Value, typename Comp, typename Alloc>
-  inline container_option<std::map<Key, Value, Comp, Alloc> > make_option(std::map<Key, Value, Comp, Alloc>& container) {
-    return container_option<std::map<Key, Value, Comp, Alloc> >(container);
+  inline container_option<std::map<Key, Value, Comp, Alloc>, std::pair<Key, Value> > make_option(std::map<Key, Value, Comp, Alloc>& container) {
+    return container_option<std::map<Key, Value, Comp, Alloc>, std::pair<Key, Value> >(container);
   }
   template<typename Key, typename Value, typename Comp, typename Alloc>
-  inline container_option<std::multimap<Key, Value, Comp, Alloc> > make_option(std::multimap<Key, Value, Comp, Alloc>& container) {
-    return container_option<std::multimap<Key, Value, Comp, Alloc> >(container);
+  inline container_option<std::multimap<Key, Value, Comp, Alloc>, std::pair<Key, Value> > make_option(std::multimap<Key, Value, Comp, Alloc>& container) {
+    return container_option<std::multimap<Key, Value, Comp, Alloc>, std::pair<Key, Value> >(container);
   }
   template<typename Key, typename Hash, typename Eq, typename Alloc>
   inline container_option<std::unordered_set<Key, Hash, Eq, Alloc> > make_option(std::unordered_set<Key, Hash, Eq, Alloc>& container) {
@@ -265,12 +313,12 @@ namespace com { namespace masaers { namespace cmdlp {
     return container_option<std::unordered_multiset<Key, Hash, Eq, Alloc> >(container);
   }
   template<typename Key, typename Value, typename  Hash, typename Eq, typename Alloc>
-  inline container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc> > make_option(std::unordered_map<Key, Value, Hash, Eq, Alloc>& container) {
-    return container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc> >(container);
+  inline container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> > make_option(std::unordered_map<Key, Value, Hash, Eq, Alloc>& container) {
+    return container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> >(container);
   }
   template<typename Key, typename Value, typename  Hash, typename Eq, typename Alloc>
-  inline container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc> > make_option(std::unordered_multimap<Key, Value, Hash, Eq, Alloc>& container) {
-    return container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc> >(container);
+  inline container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> > make_option(std::unordered_multimap<Key, Value, Hash, Eq, Alloc>& container) {
+    return container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> >(container);
   }
 
 

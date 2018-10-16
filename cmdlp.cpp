@@ -2,6 +2,45 @@
 #include <sstream>
 #include <fstream>
 
+const char* com::masaers::cmdlp::unescape_until(const char* first, const char last, std::string& out) {
+  const char* result = first;
+  if (*first != '\0' && *first != last) {
+    char quote = ' ';
+    if (*first == '\'' || *first == '"') {
+      quote = *first++;
+    }
+    for (/**/; result != nullptr && *first != '\0' && *first != last && *first != quote; ++first) {
+      if (*first == '\\') {
+        ++first;
+        if (*first != '\0') {
+          out.push_back(*first);
+        } else {
+          result = nullptr;
+        }
+      } else {
+        out.push_back(*first);
+      }
+    }
+    if (result != nullptr) {
+      if (quote == ' ') {
+        if (*first == ' ' || *first == last || *first == '\0') {
+          result = first;
+        } else {
+          result = nullptr;
+        }
+      }
+      if (quote == '\'' || quote == '"') {
+        if (*first == quote) {
+          result = first + 1;
+        } else {
+          result = nullptr;
+        }
+      }
+    }
+  }
+  return result;
+}
+
 void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::assign(const char* str) {
   base_class::read()(*config_files_m, str);
   error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
@@ -130,33 +169,6 @@ void com::masaers::cmdlp::parser::print_call(std::ostream& s, const std::vector<
   }
 }
 
-static bool unescape(const char* first, std::string& out) {
-  bool result = true;
-  if (*first != '\0') {
-    char quote = ' ';
-    if (*first == '\'' || *first == '"') {
-      quote = *first++;
-    }
-    for (; result && *first != '\0' && *first != quote; ++first) {
-      if (*first == '\\') {
-        ++first;
-        if (*first != '\0') {
-          out.push_back(*first);
-        } else {
-          result = false;
-        }
-      } else {
-        out.push_back(*first);
-      }
-    }
-    switch (quote) {
-      case ' ':            result = result && (*first == ' ' || *first == '\0'); break;
-      case '\'': case '"': result = result &&  *first == quote                 ; break;
-      default:             result = false;
-    }
-  }
-  return result;
-}
 
 std::size_t com::masaers::cmdlp::parser::parse_file(const char* filename) const {
   using namespace std;
@@ -171,7 +183,10 @@ std::size_t com::masaers::cmdlp::parser::parse_file(const char* filename) const 
         opt->observe();
         try {
           string unesc;
-          unescape(line.c_str() + sep + 1, unesc);
+          const char* last = unescape(line.c_str() + sep + 1, unesc);
+          if (last == nullptr || *last != '\0') {
+            throw std::runtime_error("Malformed value");
+          }
           opt->assign(unesc.c_str());
         } catch(const std::exception& e) {
           *erros_m << e.what() << std::endl;
