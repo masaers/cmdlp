@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -61,7 +62,7 @@ namespace com { namespace masaers { namespace cmdlp {
     inline void operator()(bool& value, const char* cstr) const {
       if (strcmp(cstr, "yes") == 0 || strcmp(cstr, "true") == 0 || strcmp(cstr, "on") == 0) {
         value = true;
-      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0 || strcmp(cstr, "off" == 0)) {
+      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0 || strcmp(cstr, "off") == 0) {
         value = false;
       }
     }
@@ -87,9 +88,11 @@ namespace com { namespace masaers { namespace cmdlp {
   template<typename Key, typename Value>
   struct to_stream<std::pair<Key, Value> > {
     inline void operator()(const std::pair<Key, Value>& kv, std::ostream& out) const {
+      out << "'";
       to_stream<typename std::decay<Key>::type>()(kv.first, out);
-      out << ':';
+      out << ":";
       to_stream<typename std::decay<Value>::type>()(kv.second, out);
+      out << "'";
     }
   };
   template<>
@@ -380,8 +383,8 @@ namespace com { namespace masaers { namespace cmdlp {
     ~parser();
     std::string usage() const;
     std::string help() const;
-    std::string summary() const;
-    
+    void dumpto_stream(std::ostream& out) const;
+
     template<typename arg_it_T = null_output_iterator>
     std::size_t parse(const int argc,
                       const char** argv,
@@ -576,14 +579,16 @@ std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv
 template<typename... options_T> 
 com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help_requested_m(false), error_count_m(0) {
   using namespace std;
-  bool summarize;
+  string dumpto;
   config_files configs;
   parser p(cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
-  p.add(make_onswitch(summarize))
-  .name("summarize")
-  .desc("Prints a summary of the parameters as undestood "
-    "by the program before running the program.")
+  p.add(make_knob(dumpto))
+  .name("dumpto")
+  .desc("Dumps the parameters, as undestood by the program, to a config file "
+    "that can later be used to rerun with the same settings. Leave empty to not dump. "
+    "Use '-' to dump to standard output.")
+  .fallback()
   ;
   p.add(make_knob(configs))
   .name("config")
@@ -597,8 +602,23 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
   error_count_m += p.validate();
   if (help_needed()) {
     cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
-  } if (summarize) {
-    cerr << p.summary();
+  } if (! dumpto.empty()) {
+    ofstream ofs;
+    ostream* out = nullptr;
+    if (dumpto == "-") {
+      out = &cout;
+    } else {
+      ofs.open(dumpto);
+      if (ofs) {
+        out = &ofs;
+      } else {
+        cerr << "Failed to open file '" << dumpto << "' for dumping parameters." << endl; 
+        ++error_count_m;
+      }
+    }
+    if (out != nullptr) {
+      p.dumpto_stream(*out);
+    }
   } else {
     // keep calm and continue as usual
   }
