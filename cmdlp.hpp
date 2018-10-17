@@ -19,13 +19,10 @@
 
 namespace com { namespace masaers { namespace cmdlp {
   class parser;
-
-  const char* unescape_until(const char* first, const char last, std::string& out);
   
-  inline const char* unescape(const char* first, std::string& out) {
-    return unescape_until(first, '\0', out);
-  }
-
+  const char* unescape_until(const char* first, const char* terminators, std::string& out);
+  
+  void escape_str(const char quote, const std::string& str, std::ostream& out);
 
   /**
   Use an object of this class as the config-file options.
@@ -77,22 +74,7 @@ namespace com { namespace masaers { namespace cmdlp {
   };
   template<typename Key, typename Value>
   struct from_cstr<std::pair<Key, Value> > {
-    inline void operator()(std::pair<Key, Value>& kv, const char* cstr) const {
-      std::string key;
-      const char* div = unescape_until(cstr + 1, cstr[0], key);
-      if (div != nullptr && *div == cstr[0]) {
-        std::string value;
-        const char* end = unescape(div + 1, value);
-        if (end != nullptr && *end == '\0') {
-          from_cstr<Key>()(kv.first, key.c_str());
-          from_cstr<Value>()(kv.second, value.c_str());
-        } else {
-          throw std::runtime_error("Failed to read value in key value pair.");
-        }
-      } else {
-        throw std::runtime_error("Failed to read key in key value pair.");
-      }
-    }
+    inline void operator()(std::pair<Key, Value>& kv, const char* cstr) const;
   };
 
 
@@ -105,13 +87,11 @@ namespace com { namespace masaers { namespace cmdlp {
   template<typename Key, typename Value>
   struct to_stream<std::pair<Key, Value> > {
     inline void operator()(const std::pair<Key, Value>& kv, std::ostream& out) const {
-      out << ':';
       to_stream<typename std::decay<Key>::type>()(kv.first, out);
       out << ':';
       to_stream<typename std::decay<Value>::type>()(kv.second, out);
     }
   };
-
 
   class option_i {
   public:
@@ -464,6 +444,24 @@ namespace com { namespace masaers { namespace cmdlp {
   
 } } } // namespace com::masaers::cmdlp
 
+template<typename Key, typename Value>
+inline void com::masaers::cmdlp::from_cstr<std::pair<Key, Value> >::operator()(std::pair<Key, Value>& kv, const char* cstr) const {
+  static const char* terminators = ":=";
+  std::string key;
+  const char* div = unescape_until(cstr, terminators, key);
+  if (div != nullptr) {
+    std::string value;
+    const char* end = unescape_until(div + 1, " \t", value);
+    if (end != nullptr && *end == '\0') {
+      from_cstr<Key>()(kv.first, key.c_str());
+      from_cstr<Value>()(kv.second, value.c_str());
+    } else {
+      throw std::runtime_error("Failed to read value in key value pair.");
+    }
+  } else {
+    throw std::runtime_error("Failed to read key in key value pair.");
+  }
+}
 
 template<typename arg_it_T>
 std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it) const {
