@@ -46,12 +46,11 @@ struct local_options {
     .desc("The alpha value.")
     .name('a', "alpha")
     .name("ALPHA")
-    .fallback()
+    .fallback(10)
     ;
     p.add(make_knob(beta))
     .desc("The beta value.")
     .name('b', "beta")
-    .is_required()
     ;
     p.add(make_switch(flip)).desc("A switch").name('f').name("flip");
     p.add(make_onswitch(on)).desc("Turns on").name("on");

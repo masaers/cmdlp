@@ -122,7 +122,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void describe(std::ostream& os) const = 0;
     virtual void evaluate(std::ostream& os) const = 0;
     virtual bool validate() const = 0;
-    virtual bool required() const = 0;
+    virtual bool in_usage() const = 0;
   }; // option_i
   
   template<typename T, typename Value>
@@ -131,25 +131,21 @@ namespace com { namespace masaers { namespace cmdlp {
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
     typedef std::function<void(Value&, const char*)> read_func;
-    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), required_m(false), read_m(from_cstr<Value>()) {}
+    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
     virtual ~option_crtp() {}
     virtual bool need_arg() const { return true; }
     virtual void observe() { ++count_m; }
     virtual void describe(std::ostream& os) const { os << desc_m; }
-    virtual bool validate() const { return ! (required() && count() == 0); }
-    virtual bool required() const { return required_m; }
+    virtual bool validate() const { return count() > 0; }
+    virtual bool in_usage() const { return false; }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
       return me();
     }
     template<typename... U> inline T& name(U&&... args) {
       me().parser_ptr()->name(static_cast<option_i*>(&me()), std::forward<U>(args)...);
-      return me();
-    }
-    inline T& is_required() {
-      required_m = true;
       return me();
     }
     inline T& on_read(const read_func& read) {
@@ -162,13 +158,11 @@ namespace com { namespace masaers { namespace cmdlp {
     inline parser*& parser_ptr() { return parser_ptr_m; }
     inline const std::string& desc() const { return desc_m; }
     inline std::string& desc() { return desc_m; }
-    inline bool& required() { return required_m; }
   protected:
     const read_func& read() const { return read_m; }
     std::size_t count_m;
     parser* parser_ptr_m;
     std::string desc_m;
-    bool required_m;
     read_func read_m; 
   }; // option_crtp
   
@@ -176,27 +170,38 @@ namespace com { namespace masaers { namespace cmdlp {
   class value_option : public option_crtp<value_option<T>, T> {
     typedef option_crtp<value_option<T>, T> base_class;
   public:
-    value_option(T& value) : base_class(), value_m(&value) {}
-    virtual ~value_option() {}
+    value_option(T& value) : base_class(), value_m(&value), fallback_m(nullptr) {}
+    virtual ~value_option() {
+      if (fallback_m != nullptr) {
+        delete fallback_m;
+        fallback_m = nullptr;
+      }
+    }
     virtual void assign(const char* str) {
       base_class::read()(*value_m, str);
     }
+    virtual bool validate() const {
+      bool result = base_class::validate();
+      if (! result && fallback_m != nullptr) {
+        *value_m = *fallback_m;
+        return true;
+      }
+      return result;
+    }
     virtual void evaluate(std::ostream& os) const { os << *value_m; }
-    inline value_option& fallback() {
-      ++base_class::count();
-      return *this;
-    }
-    template<typename U> inline value_option& fallback(U&& value) {
-      *value_m = std::forward<U>(value);
-      return fallback();
-    }
-    template<typename U> inline value_option& preset(U&& value) {
-      *value_m = std::forward<U>(value);
+    virtual bool in_usage() const { return fallback_m == nullptr; }
+    template<typename... Args> inline value_option& fallback(Args&&... args) {
+      if (fallback_m == nullptr) {
+        fallback_m = new T(std::forward<Args>(args)...);
+      } else {
+        *fallback_m = T(std::forward<Args>(args)...);
+      }
       return *this;
     }
     const T& value() const { return *value_m; }
   private:
     T* value_m;
+    T* fallback_m;
   }; // value_option
   
   template<typename Container, typename T = typename Container::value_type>
@@ -210,13 +215,16 @@ namespace com { namespace masaers { namespace cmdlp {
       base_class::read()(v, str);
       container_m->insert(container_m->end(), v);
     }
+    virtual bool validate() const {
+      return true;
+    }
     virtual void evaluate(std::ostream& os) const {
       os << '[';
       for (auto it = container_m->begin(); it != container_m->end(); ++it) {
         if (it != container_m->begin()) {
           os << ',';
         }
-        to_stream<typename Container::value_type>()(*it, os); // os << *it;
+        to_stream<typename Container::value_type>()(*it, os);
       }
       os << ']';
     }
@@ -240,7 +248,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void assign(const char* str) {
       base_class::read()(*value_m, str);
     }
-    // virtual void assign(const char* str) {}
+    virtual bool validate() const { return true; }
     virtual void evaluate(std::ostream& os) const {
       os << (*value_m ? "yes" : "no");
     }
@@ -256,6 +264,7 @@ namespace com { namespace masaers { namespace cmdlp {
     value_option(config_files& config_files) : base_class(), config_files_m(&config_files), error_count_m(0) {}
     virtual ~value_option() {}
     virtual void assign(const char* str);
+    virtual bool validate() const { return true; }
     virtual void evaluate(std::ostream& os) const;
   private:
     config_files* config_files_m;
@@ -536,7 +545,7 @@ std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv
 template<typename... options_T> 
 com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
   using namespace std;
-  parser p(std::cerr);
+  parser p(cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
   p.add(value_option<bool>(help))
   .name('h', "help")

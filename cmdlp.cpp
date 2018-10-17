@@ -70,7 +70,7 @@ std::string com::masaers::cmdlp::parser::usage() const {
   using namespace std;
   ostringstream s;
   for (const auto& opt : options_m) {
-    if (opt->required()) {
+    if (opt->in_usage()) {
       auto it = bindings_m.find(opt);
       if (it != bindings_m.end()) {
         s << ' ';
