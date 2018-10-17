@@ -42,13 +42,13 @@ struct local_options {
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
-    p.add(make_option(alpha))
+    p.add(make_knob(alpha))
     .desc("The alpha value.")
     .name('a', "alpha")
     .name("ALPHA")
     .fallback()
     ;
-    p.add(make_option(beta))
+    p.add(make_knob(beta))
     .desc("The beta value.")
     .name('b', "beta")
     .is_required()
@@ -56,21 +56,21 @@ struct local_options {
     p.add(make_switch(flip)).desc("A switch").name('f').name("flip");
     p.add(make_onswitch(on)).desc("Turns on").name("on");
     p.add(make_offswitch(off)).desc("Turns off").name("off");
-    p.add(make_option(strings))
+    p.add(make_knob(strings))
     .desc("Some input strings")
     .name('s', "str")
     ;
-    // p.add(make_option(cstr)).desc("C-strings are bad, mmmkay.").name("cstr");
-    p.add(make_option(cipher))
+    // p.add(make_knob(cstr)).desc("C-strings are bad, mmmkay.").name("cstr");
+    p.add(make_knob(cipher))
     .desc("Encrypts the provided strings.")
     .name("cipher")
     .on_read(robber_lang)
     ;
-    p.add(make_option(constants))
+    p.add(make_knob(constants))
     .desc("Named numeric constants.")
     .name('c', "const")
     ;
-    p.add(make_option(configs))
+    p.add(make_knob(configs))
     .desc("Just put parameters in a file instead!")
     .name("config")
     ;

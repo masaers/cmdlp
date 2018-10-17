@@ -273,51 +273,51 @@ namespace com { namespace masaers { namespace cmdlp {
   Creates an option tied to the provided value.
   */
   template<typename T>
-  inline value_option<T> make_option(T& value) {
+  inline value_option<T> make_knob(T& value) {
     return value_option<T>(value);
   }
   template<typename T, typename Alloc>
-  inline container_option<std::vector<T, Alloc> > make_option(std::vector<T, Alloc>& container) {
+  inline container_option<std::vector<T, Alloc> > make_knob(std::vector<T, Alloc>& container) {
     return container_option<std::vector<T, Alloc> >(container);
   }
   template<typename T, typename Alloc>
-  inline container_option<std::deque<T, Alloc> > make_option(std::deque<T, Alloc>& container) {
+  inline container_option<std::deque<T, Alloc> > make_knob(std::deque<T, Alloc>& container) {
     return container_option<std::deque<T, Alloc> >(container);
   }
   template<typename T, typename Alloc>
-  inline container_option<std::list<T, Alloc> > make_option(std::list<T, Alloc>& container) {
+  inline container_option<std::list<T, Alloc> > make_knob(std::list<T, Alloc>& container) {
     return container_option<std::list<T, Alloc> >(container);
   }
   template<typename Key, typename Comp, typename Alloc>
-  inline container_option<std::set<Key, Comp, Alloc> > make_option(std::set<Key, Comp, Alloc>& container) {
+  inline container_option<std::set<Key, Comp, Alloc> > make_knob(std::set<Key, Comp, Alloc>& container) {
     return container_option<std::set<Key, Comp, Alloc> >(container);
   }
   template<typename Key, typename Comp, typename Alloc>
-  inline container_option<std::multiset<Key, Comp, Alloc> > make_option(std::multiset<Key, Comp, Alloc>& container) {
+  inline container_option<std::multiset<Key, Comp, Alloc> > make_knob(std::multiset<Key, Comp, Alloc>& container) {
     return container_option<std::multiset<Key, Comp, Alloc> >(container);
   }
   template<typename Key, typename Value, typename Comp, typename Alloc>
-  inline container_option<std::map<Key, Value, Comp, Alloc>, std::pair<Key, Value> > make_option(std::map<Key, Value, Comp, Alloc>& container) {
+  inline container_option<std::map<Key, Value, Comp, Alloc>, std::pair<Key, Value> > make_knob(std::map<Key, Value, Comp, Alloc>& container) {
     return container_option<std::map<Key, Value, Comp, Alloc>, std::pair<Key, Value> >(container);
   }
   template<typename Key, typename Value, typename Comp, typename Alloc>
-  inline container_option<std::multimap<Key, Value, Comp, Alloc>, std::pair<Key, Value> > make_option(std::multimap<Key, Value, Comp, Alloc>& container) {
+  inline container_option<std::multimap<Key, Value, Comp, Alloc>, std::pair<Key, Value> > make_knob(std::multimap<Key, Value, Comp, Alloc>& container) {
     return container_option<std::multimap<Key, Value, Comp, Alloc>, std::pair<Key, Value> >(container);
   }
   template<typename Key, typename Hash, typename Eq, typename Alloc>
-  inline container_option<std::unordered_set<Key, Hash, Eq, Alloc> > make_option(std::unordered_set<Key, Hash, Eq, Alloc>& container) {
+  inline container_option<std::unordered_set<Key, Hash, Eq, Alloc> > make_knob(std::unordered_set<Key, Hash, Eq, Alloc>& container) {
     return container_option<std::unordered_set<Key, Hash, Eq, Alloc> >(container);
   }
   template<typename Key, typename Hash, typename Eq, typename Alloc>
-  inline container_option<std::unordered_multiset<Key, Hash, Eq, Alloc> > make_option(std::unordered_multiset<Key, Hash, Eq, Alloc>& container) {
+  inline container_option<std::unordered_multiset<Key, Hash, Eq, Alloc> > make_knob(std::unordered_multiset<Key, Hash, Eq, Alloc>& container) {
     return container_option<std::unordered_multiset<Key, Hash, Eq, Alloc> >(container);
   }
   template<typename Key, typename Value, typename  Hash, typename Eq, typename Alloc>
-  inline container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> > make_option(std::unordered_map<Key, Value, Hash, Eq, Alloc>& container) {
+  inline container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> > make_knob(std::unordered_map<Key, Value, Hash, Eq, Alloc>& container) {
     return container_option<std::unordered_map<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> >(container);
   }
   template<typename Key, typename Value, typename  Hash, typename Eq, typename Alloc>
-  inline container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> > make_option(std::unordered_multimap<Key, Value, Hash, Eq, Alloc>& container) {
+  inline container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> > make_knob(std::unordered_multimap<Key, Value, Hash, Eq, Alloc>& container) {
     return container_option<std::unordered_multimap<Key, Value, Hash, Eq, Alloc>, std::pair<Key, Value> >(container);
   }
 
