@@ -63,8 +63,19 @@ Knobs are created with `make_knob`. In addition to the `name` and `desc` methods
 **Containers as values**
 When the value being set is a container (eg. `vector`, `set`, or `unordered_map`), instead of overwriting the corresponding value, values are *inserted* every time that flag is given. You can still provide `fallback` content that will only be inserted if nothing is provided. Unlike value knobs it is not mandatory to add anything, an empty container is a perfectly valid value.
 
+**Key-value storage as container**
+When the container is a `map`, the value is considered to be a key&ndash;value pair, which you can give as either `key:value` or `key=value`.
+
 ### Switches
 Switches are created with `make_onswitch` and `make_offswitch`. An on-switch starts as `false`, but becomes `true` if it is set (regardless of how many times). And off-switch starts as `true`, but becomes `false` if it is set (regardless of how many times). This behavior differs between the command line and config files, with config files overriding the value with of the underlying Boolean with a specific truth value (eg. `help=yes`).
+
+### Config files
+A config file is a text file that sets the parameters to your program much like variables in bash. Each line contains a *long* flag name followed by an equal sign, followed by the value to assign to the parameter. For example:
+```
+alpha=10
+smooth=no
+```
+Notice that switches are set rather than flipped from an assumed current position. For containers as values, you can either give the name on multiple rows, give multiple values  on a single line, or any mix of the two strategies.
 
 ### Advanced usage
 There are some advanced features that you probably do not need.
