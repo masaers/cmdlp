@@ -68,6 +68,7 @@ struct local_options {
     p.add(make_knob(constants))
     .desc("Named numeric constants.")
     .name('c', "const")
+    .fallback({ {"pi", 3.14} })
     ;
     p.add(make_knob(configs))
     .desc("Just put parameters in a file instead!")

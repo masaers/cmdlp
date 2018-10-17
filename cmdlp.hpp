@@ -184,7 +184,7 @@ namespace com { namespace masaers { namespace cmdlp {
       bool result = base_class::validate();
       if (! result && fallback_m != nullptr) {
         *value_m = *fallback_m;
-        return true;
+        result = true;
       }
       return result;
     }
@@ -204,18 +204,27 @@ namespace com { namespace masaers { namespace cmdlp {
     T* fallback_m;
   }; // value_option
   
+
   template<typename Container, typename T = typename Container::value_type>
   class container_option : public option_crtp<container_option<Container, T>, T> {
     typedef option_crtp<container_option<Container, T>, T> base_class;
   public:
-    container_option(Container& container) : base_class(), container_m(&container) {}
-    virtual ~container_option() {}
+    container_option(Container& container) : base_class(), container_m(&container), fallback_m(nullptr) {}
+    virtual ~container_option() {
+      if (fallback_m != nullptr) {
+        delete fallback_m;
+        fallback_m = nullptr;
+      }
+    }
     virtual void assign(const char* str) {
       T v;
       base_class::read()(v, str);
       container_m->insert(container_m->end(), v);
     }
     virtual bool validate() const {
+      if (! base_class::validate() && fallback_m != nullptr) {
+        *container_m = *fallback_m;
+      }
       return true;
     }
     virtual void evaluate(std::ostream& os) const {
@@ -228,9 +237,28 @@ namespace com { namespace masaers { namespace cmdlp {
       }
       os << ']';
     }
+    template<typename... Args>
+    container_option& fallback(Args&&... args) {
+      if (fallback_m == nullptr) {
+        fallback_m = new Container(std::forward<Args>(args)...);
+      } else {
+        *fallback_m = Container(std::forward<Args>(args)...);
+      }
+      return *this;
+    }
+    container_option& fallback(std::initializer_list<typename Container::value_type> ilist) {
+      if (fallback_m == nullptr) {
+        fallback_m = new Container(ilist);
+      } else {
+        *fallback_m = Container(ilist);
+      }
+      return *this;
+    }
   private:
     Container* container_m;
+    Container* fallback_m;
   }; // container_option
+
 
   template<>
   class value_option<bool> : public option_crtp<value_option<bool>, bool> {
@@ -547,14 +575,14 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
   using namespace std;
   parser p(cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
-  p.add(value_option<bool>(help))
-  .name('h', "help")
-  .desc("Prints the help message and exits normally.")
-  ;
-  p.add(value_option<bool>(summarize))
+  p.add(make_onswitch(summarize))
   .name("summarize")
   .desc("Prints a summary of the parameters as undestood "
     "by the program before running the program.")
+  ;
+  p.add(make_onswitch(help))
+  .name('h', "help")
+  .desc("Prints the help message and exits normally.")
   ;
   error_count_m += p.parse(argc, argv, back_inserter(args));
   error_count_m += p.validate();
