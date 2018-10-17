@@ -19,9 +19,9 @@
 
 namespace com { namespace masaers { namespace cmdlp {
   class parser;
-  
+
   const char* unescape_until(const char* first, const char* terminators, std::string& out);
-  
+
   void escape_str(const char quote, const std::string& str, std::ostream& out);
 
   /**
@@ -214,14 +214,12 @@ namespace com { namespace masaers { namespace cmdlp {
       return true;
     }
     virtual void evaluate(std::ostream& os) const {
-      os << '[';
       for (auto it = container_m->begin(); it != container_m->end(); ++it) {
         if (it != container_m->begin()) {
-          os << ',';
+          os << ' ';
         }
         to_stream<typename Container::value_type>()(*it, os);
       }
-      os << ']';
     }
     template<typename... Args>
     container_option& fallback(Args&&... args) {

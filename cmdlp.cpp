@@ -53,16 +53,14 @@ void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::assig
   error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
 }
 
-void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::evaluate(std::ostream& os) const {
+void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::evaluate(std::ostream& out) const {
   const auto& fns = config_files_m->filenames();
-  os << '[';
   for (auto it = fns.begin(); it != fns.end(); ++it) {
     if (it != fns.begin()) {
-      os << ',';
+      out << ' ';
     }
-    os << *it;
+    escape_str(' ', *it, out);
   }
-  os << ']';
 }
 
 com::masaers::cmdlp::parser::~parser() {
@@ -183,22 +181,29 @@ std::size_t com::masaers::cmdlp::parser::parse_file(const char* filename) const 
   ifstream ifs(filename);
   if (ifs) {
     for (std::string line; getline(ifs, line); ) {
-      const auto sep = line.find('=');
-      const auto it = names_m.find(line.substr(0, sep));
+      const auto div = line.find('=');
+      const auto it = names_m.find(line.substr(0, div));
       if (it != names_m.end()) {
         option_i* opt = it->second;
-        opt->observe();
         try {
           string unesc;
-          const char* last = unescape_until(line.c_str() + sep + 1, " \t", unesc);
-          if (last == nullptr || *last != '\0') {
+          const char* at = unescape_until(line.c_str() + div + 1, " \t", unesc);
+          for (; at != nullptr && ! (unesc.empty() && *at == '\0'); at = unescape_until(at, " \t", unesc)) {
+            if (unesc.empty()) {
+              ++at;
+            } else {
+              opt->observe();
+              opt->assign(unesc.c_str());
+              unesc.clear();
+            }
+          }
+          if (at == nullptr || *at != '\0') {
             throw std::runtime_error("Malformed value");
           }
-          opt->assign(unesc.c_str());
         } catch(const std::exception& e) {
           *erros_m << e.what() << std::endl;
           ++error_count;
-        } // try
+        }
       }
     }
   } else {
