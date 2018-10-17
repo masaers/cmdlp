@@ -59,9 +59,9 @@ namespace com { namespace masaers { namespace cmdlp {
   template<>
   struct from_cstr<bool> {
     inline void operator()(bool& value, const char* cstr) const {
-      if (strcmp(cstr, "yes") == 0 || strcmp(cstr, "true") == 0) {
+      if (strcmp(cstr, "yes") == 0 || strcmp(cstr, "true") == 0 || strcmp(cstr, "on") == 0) {
         value = true;
-      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0) {
+      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0 || strcmp(cstr, "off" == 0)) {
         value = false;
       }
     }
