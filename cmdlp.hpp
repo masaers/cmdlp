@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -20,12 +21,9 @@
 namespace com { namespace masaers { namespace cmdlp {
   class parser;
 
-  const char* unescape_until(const char* first, const char last, std::string& out);
-  
-  inline const char* unescape(const char* first, std::string& out) {
-    return unescape_until(first, '\0', out);
-  }
+  const char* unescape_until(const char* first, const char* terminators, std::string& out);
 
+  void escape_str(const char quote, const std::string& str, std::ostream& out);
 
   /**
   Use an object of this class as the config-file options.
@@ -62,9 +60,9 @@ namespace com { namespace masaers { namespace cmdlp {
   template<>
   struct from_cstr<bool> {
     inline void operator()(bool& value, const char* cstr) const {
-      if (strcmp(cstr, "yes") == 0 || strcmp(cstr, "true") == 0) {
+      if (strcmp(cstr, "yes") == 0 || strcmp(cstr, "true") == 0 || strcmp(cstr, "on") == 0) {
         value = true;
-      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0) {
+      } else if (strcmp(cstr, "no") == 0 || strcmp(cstr, "false") == 0 || strcmp(cstr, "off") == 0) {
         value = false;
       }
     }
@@ -77,22 +75,7 @@ namespace com { namespace masaers { namespace cmdlp {
   };
   template<typename Key, typename Value>
   struct from_cstr<std::pair<Key, Value> > {
-    inline void operator()(std::pair<Key, Value>& kv, const char* cstr) const {
-      std::string key;
-      const char* div = unescape_until(cstr + 1, cstr[0], key);
-      if (div != nullptr && *div == cstr[0]) {
-        std::string value;
-        const char* end = unescape(div + 1, value);
-        if (end != nullptr && *end == '\0') {
-          from_cstr<Key>()(kv.first, key.c_str());
-          from_cstr<Value>()(kv.second, value.c_str());
-        } else {
-          throw std::runtime_error("Failed to read value in key value pair.");
-        }
-      } else {
-        throw std::runtime_error("Failed to read key in key value pair.");
-      }
-    }
+    inline void operator()(std::pair<Key, Value>& kv, const char* cstr) const;
   };
 
 
@@ -105,13 +88,19 @@ namespace com { namespace masaers { namespace cmdlp {
   template<typename Key, typename Value>
   struct to_stream<std::pair<Key, Value> > {
     inline void operator()(const std::pair<Key, Value>& kv, std::ostream& out) const {
-      out << ':';
+      out << "'";
       to_stream<typename std::decay<Key>::type>()(kv.first, out);
-      out << ':';
+      out << ":";
       to_stream<typename std::decay<Value>::type>()(kv.second, out);
+      out << "'";
     }
   };
-
+  template<>
+  struct to_stream<std::string> {
+    inline void operator()(const std::string& str, std::ostream& out) const {
+      escape_str('"', str, out);
+    }
+  };
 
   class option_i {
   public:
@@ -228,14 +217,12 @@ namespace com { namespace masaers { namespace cmdlp {
       return true;
     }
     virtual void evaluate(std::ostream& os) const {
-      os << '[';
       for (auto it = container_m->begin(); it != container_m->end(); ++it) {
         if (it != container_m->begin()) {
-          os << ',';
+          os << ' ';
         }
         to_stream<typename Container::value_type>()(*it, os);
       }
-      os << ']';
     }
     template<typename... Args>
     container_option& fallback(Args&&... args) {
@@ -396,8 +383,8 @@ namespace com { namespace masaers { namespace cmdlp {
     ~parser();
     std::string usage() const;
     std::string help() const;
-    std::string summary() const;
-    
+    void dumpto_stream(std::ostream& out) const;
+
     template<typename arg_it_T = null_output_iterator>
     std::size_t parse(const int argc,
                       const char** argv,
@@ -464,6 +451,24 @@ namespace com { namespace masaers { namespace cmdlp {
   
 } } } // namespace com::masaers::cmdlp
 
+template<typename Key, typename Value>
+inline void com::masaers::cmdlp::from_cstr<std::pair<Key, Value> >::operator()(std::pair<Key, Value>& kv, const char* cstr) const {
+  static const char* terminators = ":=";
+  std::string key;
+  const char* div = unescape_until(cstr, terminators, key);
+  if (div != nullptr) {
+    std::string value;
+    const char* end = unescape_until(div + 1, " \t", value);
+    if (end != nullptr && *end == '\0') {
+      from_cstr<Key>()(kv.first, key.c_str());
+      from_cstr<Value>()(kv.second, value.c_str());
+    } else {
+      throw std::runtime_error("Failed to read value in key value pair.");
+    }
+  } else {
+    throw std::runtime_error("Failed to read key in key value pair.");
+  }
+}
 
 template<typename arg_it_T>
 std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it) const {
@@ -574,14 +579,16 @@ std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv
 template<typename... options_T> 
 com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help_requested_m(false), error_count_m(0) {
   using namespace std;
-  bool summarize;
+  string dumpto;
   config_files configs;
   parser p(cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
-  p.add(make_onswitch(summarize))
-  .name("summarize")
-  .desc("Prints a summary of the parameters as undestood "
-    "by the program before running the program.")
+  p.add(make_knob(dumpto))
+  .name("dumpto")
+  .desc("Dumps the parameters, as undestood by the program, to a config file "
+    "that can later be used to rerun with the same settings. Leave empty to not dump. "
+    "Use '-' to dump to standard output.")
+  .fallback()
   ;
   p.add(make_knob(configs))
   .name("config")
@@ -595,8 +602,23 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
   error_count_m += p.validate();
   if (help_needed()) {
     cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
-  } if (summarize) {
-    cerr << p.summary();
+  } if (! dumpto.empty()) {
+    ofstream ofs;
+    ostream* out = nullptr;
+    if (dumpto == "-") {
+      out = &cout;
+    } else {
+      ofs.open(dumpto);
+      if (ofs) {
+        out = &ofs;
+      } else {
+        cerr << "Failed to open file '" << dumpto << "' for dumping parameters." << endl; 
+        ++error_count_m;
+      }
+    }
+    if (out != nullptr) {
+      p.dumpto_stream(*out);
+    }
   } else {
     // keep calm and continue as usual
   }

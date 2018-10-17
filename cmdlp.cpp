@@ -2,60 +2,65 @@
 #include <sstream>
 #include <fstream>
 
-const char* com::masaers::cmdlp::unescape_until(const char* first, const char last, std::string& out) {
-  const char* result = first;
-  if (*first != '\0' && *first != last) {
-    char quote = ' ';
-    if (*first == '\'' || *first == '"') {
-      quote = *first++;
-    }
-    for (/**/; result != nullptr && *first != '\0' && *first != last && *first != quote; ++first) {
+const char* com::masaers::cmdlp::unescape_until(const char* first, const char* terminators, std::string& out) {
+  static const char* quotes = "'\"";
+  for (/**/; first != nullptr && *first != '\0' && strchr(terminators, *first) == nullptr; ++first) {
+    if (strchr(quotes, *first) == nullptr) {
       if (*first == '\\') {
         ++first;
-        if (*first != '\0') {
-          out.push_back(*first);
-        } else {
-          result = nullptr;
-        }
+      }
+      if (*first != '\0') {
+        out.push_back(*first);
       } else {
+        first = nullptr;
+      }
+    } else {
+      const char quote = *first++;
+      for (/**/; first != nullptr && *first != '\0' && *first != quote; ++ first) {
         out.push_back(*first);
       }
-    }
-    if (result != nullptr) {
-      if (quote == ' ') {
-        if (*first == ' ' || *first == last || *first == '\0') {
-          result = first;
-        } else {
-          result = nullptr;
-        }
-      }
-      if (quote == '\'' || quote == '"') {
-        if (*first == quote) {
-          result = first + 1;
-        } else {
-          result = nullptr;
-        }
+      if (*first != quote) {
+        first = nullptr;
       }
     }
   }
-  return result;
+  return first;
 }
+
+void com::masaers::cmdlp::escape_str(const char quote, const std::string& str, std::ostream& out) {
+  if (quote == '\'' || quote == '"') {
+    out << quote;
+    for (const char& c : str) {
+      if (c == quote) {
+        out << '\\';
+      }
+      out << c;
+    }
+    out << quote;
+  } else {
+    for (const char& c : str) {
+      if (c == ' ') {
+        out << '\\';
+      }
+      out << c;
+    }
+  }
+}
+
 
 void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::assign(const char* str) {
   base_class::read()(*config_files_m, str);
   error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
 }
 
-void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::evaluate(std::ostream& os) const {
+void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::evaluate(std::ostream& out) const {
   const auto& fns = config_files_m->filenames();
-  os << '[';
   for (auto it = fns.begin(); it != fns.end(); ++it) {
     if (it != fns.begin()) {
-      os << ',';
+      out << ' ';
     }
-    os << *it;
+    escape_str(' ', *it, out);
   }
-  os << ']';
 }
 
 com::masaers::cmdlp::parser::~parser() {
@@ -100,25 +105,23 @@ std::string com::masaers::cmdlp::parser::help() const {
   return s.str();
 }
 
-std::string com::masaers::cmdlp::parser::summary() const {
+void com::masaers::cmdlp::parser::dumpto_stream(std::ostream& out) const {
   using namespace std;
-  ostringstream s;
   for (const auto& opt : options_m) {
     auto it = bindings_m.find(opt);
     if (it != bindings_m.end()) {
       if (! it->second.first.empty()) {
-        s << it->second.first.front();
+        out << it->second.first.front();
       } else {
-        s << it->second.second.front();
+        out << it->second.second.front();
       }
     } else {
-      s << "<unnamed option>";
+      out << "<unnamed option>";
     }
-    s << '=';
-    opt->evaluate(s);
-    s << endl;
+    out << '=';
+    opt->evaluate(out);
+    out << endl;
   }
-  return s.str();
 }
 
 bool com::masaers::cmdlp::parser::bind(option_i* opt, const char flag) {
@@ -176,22 +179,29 @@ std::size_t com::masaers::cmdlp::parser::parse_file(const char* filename) const 
   ifstream ifs(filename);
   if (ifs) {
     for (std::string line; getline(ifs, line); ) {
-      const auto sep = line.find('=');
-      const auto it = names_m.find(line.substr(0, sep));
+      const auto div = line.find('=');
+      const auto it = names_m.find(line.substr(0, div));
       if (it != names_m.end()) {
         option_i* opt = it->second;
-        opt->observe();
         try {
           string unesc;
-          const char* last = unescape(line.c_str() + sep + 1, unesc);
-          if (last == nullptr || *last != '\0') {
+          const char* at = unescape_until(line.c_str() + div + 1, " \t", unesc);
+          for (; at != nullptr && ! (unesc.empty() && *at == '\0'); at = unescape_until(at, " \t", unesc)) {
+            if (unesc.empty()) {
+              ++at;
+            } else {
+              opt->observe();
+              opt->assign(unesc.c_str());
+              unesc.clear();
+            }
+          }
+          if (at == nullptr || *at != '\0') {
             throw std::runtime_error("Malformed value");
           }
-          opt->assign(unesc.c_str());
         } catch(const std::exception& e) {
           *erros_m << e.what() << std::endl;
           ++error_count;
-        } // try
+        }
       }
     }
   } else {
