@@ -38,41 +38,36 @@ struct local_options {
   std::set<std::string> strings;
   std::vector<std::string> cipher;
   std::map<std::string, float> constants;
-  com::masaers::cmdlp::config_files configs;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
-    p.add(make_option(alpha))
+    p.add(make_knob(alpha))
     .desc("The alpha value.")
     .name('a', "alpha")
     .name("ALPHA")
-    .fallback()
+    .fallback(10)
     ;
-    p.add(make_option(beta))
+    p.add(make_knob(beta))
     .desc("The beta value.")
     .name('b', "beta")
-    .is_required()
     ;
     p.add(make_switch(flip)).desc("A switch").name('f').name("flip");
     p.add(make_onswitch(on)).desc("Turns on").name("on");
     p.add(make_offswitch(off)).desc("Turns off").name("off");
-    p.add(make_option(strings))
+    p.add(make_knob(strings))
     .desc("Some input strings")
     .name('s', "str")
     ;
-    // p.add(make_option(cstr)).desc("C-strings are bad, mmmkay.").name("cstr");
-    p.add(make_option(cipher))
+    // p.add(make_knob(cstr)).desc("C-strings are bad, mmmkay.").name("cstr");
+    p.add(make_knob(cipher))
     .desc("Encrypts the provided strings.")
     .name("cipher")
     .on_read(robber_lang)
     ;
-    p.add(make_option(constants))
+    p.add(make_knob(constants))
     .desc("Named numeric constants.")
     .name('c', "const")
-    ;
-    p.add(make_option(configs))
-    .desc("Just put parameters in a file instead!")
-    .name("config")
+    .fallback({ {"pi", 3.14} })
     ;
     return;
   }
@@ -82,9 +77,7 @@ int main(const int argc, const char** argv) {
   using namespace std;
   com::masaers::cmdlp::options<local_options> o(argc, argv);
   if (! o) {
-    return EXIT_FAILURE;
-  } else if (o.help) {
-    return EXIT_SUCCESS;
+    return o.exit_code();
   }
 
   return EXIT_SUCCESS;
