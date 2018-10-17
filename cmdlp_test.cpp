@@ -38,7 +38,6 @@ struct local_options {
   std::set<std::string> strings;
   std::vector<std::string> cipher;
   std::map<std::string, float> constants;
-  com::masaers::cmdlp::config_files configs;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
@@ -70,10 +69,6 @@ struct local_options {
     .name('c', "const")
     .fallback({ {"pi", 3.14} })
     ;
-    p.add(make_knob(configs))
-    .desc("Just put parameters in a file instead!")
-    .name("config")
-    ;
     return;
   }
 };
@@ -82,9 +77,7 @@ int main(const int argc, const char** argv) {
   using namespace std;
   com::masaers::cmdlp::options<local_options> o(argc, argv);
   if (! o) {
-    return EXIT_FAILURE;
-  } else if (o.help) {
-    return EXIT_SUCCESS;
+    return o.exit_code();
   }
 
   return EXIT_SUCCESS;

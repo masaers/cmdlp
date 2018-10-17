@@ -452,11 +452,12 @@ namespace com { namespace masaers { namespace cmdlp {
   public:
     inline options(const int argc, const char** argv);
     inline options(const int argc, char** argv) : options(argc, (const char**)argv) {}
-    inline operator bool() const { return error_count_m == 0; }
-    bool help = false;
-    bool summarize = false;
+    inline operator bool() const { return ! help_needed(); }
+    inline int exit_code() const { return error_count_m == 0 ? EXIT_SUCCESS : EXIT_FAILURE; }
     std::vector<std::string> args;
   private:
+    inline bool help_needed() const { return help_requested_m || error_count_m != 0; }
+    bool help_requested_m;
     std::size_t error_count_m;
   }; // options
   
@@ -571,8 +572,10 @@ std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv
 
 
 template<typename... options_T> 
-com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help(false), summarize(false), error_count_m(0) {
+com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help_requested_m(false), error_count_m(0) {
   using namespace std;
+  bool summarize;
+  config_files configs;
   parser p(cerr);
   options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
   p.add(make_onswitch(summarize))
@@ -580,13 +583,17 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
   .desc("Prints a summary of the parameters as undestood "
     "by the program before running the program.")
   ;
-  p.add(make_onswitch(help))
+  p.add(make_knob(configs))
+  .name("config")
+  .desc("Read parameters from the provided file as if they were provided in the same position on the command line.")
+  ;
+  p.add(make_onswitch(help_requested_m))
   .name('h', "help")
   .desc("Prints the help message and exits normally.")
   ;
   error_count_m += p.parse(argc, argv, back_inserter(args));
   error_count_m += p.validate();
-  if (error_count_m != 0 || help) {
+  if (help_needed()) {
     cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
   } if (summarize) {
     cerr << p.summary();
