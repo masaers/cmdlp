@@ -92,6 +92,12 @@ namespace com { namespace masaers { namespace cmdlp {
       to_stream<typename std::decay<Value>::type>()(kv.second, out);
     }
   };
+  template<>
+  struct to_stream<std::string> {
+    inline void operator()(const std::string& str, std::ostream& out) const {
+      escape_str('"', str, out);
+    }
+  };
 
   class option_i {
   public:
