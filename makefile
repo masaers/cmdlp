@@ -7,7 +7,7 @@
 # Settings
 #
 
-CXXFLAGS+=-Wall -pedantic -std=c++11 -g -O3
+CXXFLAGS+=-Wall -pedantic -std=c++11 -g -O3 -Ibuild/include
 LDFLAGS=
 
 PROG_NAMES=
@@ -24,6 +24,7 @@ BIN_NAMES=$(PROG_NAMES) $(TEST_NAMES)
 # Object files are c++ sources that do not result in stand alone binaries
 OBJECTS=$(patsubst %.cpp,build/obj/%.o,$(filter-out $(BIN_NAMES:%=%.cpp),$(wildcard *.cpp)))
 
+GENERATED_HEADERS=build/include/magic_enum.hpp
 
 #
 # Targets
@@ -36,7 +37,7 @@ OBJECTS=$(patsubst %.cpp,build/obj/%.o,$(filter-out $(BIN_NAMES:%=%.cpp),$(wildc
 
 all : binaries
 
-binaries : $(BIN_NAMES:%=build/bin/%)
+binaries : $(GENERATED_HEADERS) $(BIN_NAMES:%=build/bin/%)
 
 test : $(TEST_NAMES:%=build/test/%.out)
 	@if [ -s build/test/.ERROR ]; then \
@@ -50,6 +51,9 @@ build/bin/% : build/obj/%.o $(OBJECTS) build/bin/.STAMP
 build/obj/%.o : %.cpp build/obj/.STAMP build/dep/.STAMP
 	$(CXX) $(CXXFLAGS) -MM -MT '$@' $< > $(@:build/obj/%.o=build/dep/%.d)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+build/include/%.hpp : data/%.xml build/include/.STAMP
+	@xsltproc senum.xslt $< > $@
 
 build/test/%.out : build/bin/% build/test/.STAMP
 	@if [ -e $@ ]; then \

@@ -1,7 +1,9 @@
 #include "cmdlp.hpp"
+#include "magic_enum.hpp"
 #include <iostream>
 #include <vector>
 #include <set>
+
 
 /**
   Cryptic read function.
@@ -38,6 +40,7 @@ struct local_options {
   std::set<std::string> strings;
   std::vector<std::string> cipher;
   std::map<std::string, float> constants;
+  knobs::magic_level::value magic_level;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
@@ -69,6 +72,10 @@ struct local_options {
     .name('c', "const")
     .fallback({ {"pi", 3.14} })
     ;
+    p.add(make_knob(magic_level))
+    .desc(knobs::magic_level::desc())
+    .name('m', "magic")
+    ;
     return;
   }
 };
@@ -78,6 +85,17 @@ int main(const int argc, const char** argv) {
   com::masaers::cmdlp::options<local_options> o(argc, argv);
   if (! o) {
     return o.exit_code();
+  }
+
+  switch (o.magic_level) {
+    case knobs::magic_level::no_magic:
+    break;
+    case knobs::magic_level::less_magic:
+    break;
+    case knobs::magic_level::more_magic:
+    break;
+    default:
+    ;
   }
 
   return EXIT_SUCCESS;
