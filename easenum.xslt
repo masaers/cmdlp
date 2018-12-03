@@ -19,9 +19,9 @@
     <xsl:if test="@namespace">
       <xsl:text>namespace </xsl:text>
       <xsl:value-of select="@namespace" />
-      <xsl:text> {</xsl:text>
+      <xsl:text> { </xsl:text>
     </xsl:if>
-    <xsl:text> class </xsl:text>
+    <xsl:text>class </xsl:text>
     <xsl:value-of select="@name" />
     <xsl:text> {&#xa;typedef std::array&lt;const char*,</xsl:text>
     <xsl:value-of select="count(item)" />
