@@ -53,7 +53,7 @@ build/obj/%.o : %.cpp build/obj/.STAMP build/dep/.STAMP
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 build/include/%.hpp : data/%.xml build/include/.STAMP
-	@xsltproc senum.xslt $< > $@
+	xsltproc easenum.xslt $< > $@
 
 build/test/%.out : build/bin/% build/test/.STAMP
 	@if [ -e $@ ]; then \
