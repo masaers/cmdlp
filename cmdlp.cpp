@@ -105,22 +105,24 @@ std::string com::masaers::cmdlp::parser::help() const {
   return s.str();
 }
 
-void com::masaers::cmdlp::parser::dumpto_stream(std::ostream& out) const {
+void com::masaers::cmdlp::parser::dumpto_stream(std::ostream& out, bool include_meta) const {
   using namespace std;
   for (const auto& opt : options_m) {
-    auto it = bindings_m.find(opt);
-    if (it != bindings_m.end()) {
-      if (! it->second.first.empty()) {
-        out << it->second.first.front();
+    if (include_meta || ! opt->is_meta()) {
+      auto it = bindings_m.find(opt);
+      if (it != bindings_m.end()) {
+        if (! it->second.first.empty()) {
+          out << it->second.first.front();
+        } else {
+          out << it->second.second.front();
+        }
       } else {
-        out << it->second.second.front();
+        out << "<unnamed option>";
       }
-    } else {
-      out << "<unnamed option>";
+      out << '=';
+      opt->evaluate(out);
+      out << endl;
     }
-    out << '=';
-    opt->evaluate(out);
-    out << endl;
   }
 }
 

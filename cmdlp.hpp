@@ -112,6 +112,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void evaluate(std::ostream& os) const = 0;
     virtual bool validate() const = 0;
     virtual bool in_usage() const = 0;
+    virtual bool is_meta() const = 0;
   }; // option_i
   
   template<typename T, typename Value>
@@ -120,7 +121,7 @@ namespace com { namespace masaers { namespace cmdlp {
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
     typedef std::function<void(Value&, const char*)> read_func;
-    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()) {}
+    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()), is_meta_m(false) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
     virtual ~option_crtp() {}
@@ -129,6 +130,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void describe(std::ostream& os) const { os << desc_m; }
     virtual bool validate() const { return count() > 0; }
     virtual bool in_usage() const { return false; }
+    virtual bool is_meta() const { return is_meta_m; }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
       return me();
@@ -139,6 +141,10 @@ namespace com { namespace masaers { namespace cmdlp {
     }
     inline T& on_read(const read_func& read) {
       read_m = read;
+      return me();
+    }
+    inline T& is_meta() {
+      is_meta_m = true;
       return me();
     }
     inline std::size_t& count() { return count_m; }
@@ -152,7 +158,8 @@ namespace com { namespace masaers { namespace cmdlp {
     std::size_t count_m;
     parser* parser_ptr_m;
     std::string desc_m;
-    read_func read_m; 
+    read_func read_m;
+    bool is_meta_m;
   }; // option_crtp
   
   template<typename T>
@@ -383,7 +390,7 @@ namespace com { namespace masaers { namespace cmdlp {
     ~parser();
     std::string usage() const;
     std::string help() const;
-    void dumpto_stream(std::ostream& out) const;
+    void dumpto_stream(std::ostream& out, bool include_meta) const;
 
     template<typename arg_it_T = null_output_iterator>
     std::size_t parse(const int argc,
@@ -589,6 +596,7 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
     "that can later be used to rerun with the same settings. Leave empty to not dump. "
     "Use '-' to dump to standard output.")
   .fallback()
+  .is_meta()
   ;
   p.add(make_knob(configs))
   .name("config")
@@ -597,6 +605,7 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
   p.add(make_onswitch(help_requested_m))
   .name('h', "help")
   .desc("Prints the help message and exits normally.")
+  .is_meta()
   ;
   error_count_m += p.parse(argc, argv, back_inserter(args));
   error_count_m += p.validate();
@@ -617,7 +626,7 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
       }
     }
     if (out != nullptr) {
-      p.dumpto_stream(*out);
+      p.dumpto_stream(*out, false);
     }
   } else {
     // keep calm and continue as usual
