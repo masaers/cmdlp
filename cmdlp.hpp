@@ -88,11 +88,9 @@ namespace com { namespace masaers { namespace cmdlp {
   template<typename Key, typename Value>
   struct to_stream<std::pair<Key, Value> > {
     inline void operator()(const std::pair<Key, Value>& kv, std::ostream& out) const {
-      out << "'";
       to_stream<typename std::decay<Key>::type>()(kv.first, out);
       out << ":";
       to_stream<typename std::decay<Value>::type>()(kv.second, out);
-      out << "'";
     }
   };
   template<>
