@@ -1,4 +1,5 @@
 #include "cmdlp.hpp"
+#include "paragraph.hpp"
 #include <sstream>
 #include <fstream>
 
@@ -98,9 +99,12 @@ std::string com::masaers::cmdlp::parser::help() const {
     }    
     s << '=';
     opt->evaluate(s);
-    s << endl << "    ";
-    opt->describe(s);
     s << endl;
+    {
+      const auto p = paragraph(s, 80, 4, 3);
+      opt->describe(s);
+      s << endl;
+    }
   }
   return s.str();
 }
