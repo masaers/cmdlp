@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- ======================================================================= -->
 <!-- Creates a C++ header with a [S]erializable [ENUM]eration. -->
 <!-- These are especially useful for categorial knobs in the command line parser. -->
+<!-- ======================================================================= -->
+<!-- Usage: xsltproc easenum.xslt input.xml > output.hpp -->
+<!-- ======================================================================= -->
+
 <xsl:transform version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:output method="text" />
   <xsl:strip-space elements="*"/>
