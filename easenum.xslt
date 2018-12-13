@@ -11,6 +11,7 @@
  * Auto-generated header file.
  */
 #include &lt;iostream&gt;
+#include &lt;array&gt;
 </xsl:text>
     <xsl:apply-templates />
   </xsl:template>
