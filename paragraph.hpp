@@ -93,6 +93,7 @@ namespace com { namespace masaers { namespace cmdlp {
 } } }
 
 
+/// \todo Handle unsynched newlines.
 template<typename Char>
 void com::masaers::cmdlp::pbuf<Char>::ragged_right(std::basic_ostream<Char>& os,
                                                    const typename com::masaers::cmdlp::pbuf<Char>::string_type& str) {
