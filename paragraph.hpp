@@ -12,6 +12,7 @@ namespace com { namespace masaers { namespace cmdlp {
   class pbuf : public std::basic_stringbuf<Char> {
   public:
     typedef std::basic_string<Char> string_type;
+    typedef std::pair<typename string_type::const_iterator, typename string_type::const_iterator> substring_type;
   protected:
     std::basic_streambuf<Char>* buf_m;
     std::basic_ostream<Char>* stream_m;
@@ -29,7 +30,16 @@ namespace com { namespace masaers { namespace cmdlp {
       stream_m->rdbuf(this);
       return 0;
     }
+    static inline constexpr std::size_t substring_len(const substring_type& str) {
+      return str.second - str.first;
+    }
+    static inline void write_substring_to(std::basic_ostream<Char>& os, const substring_type& str) {
+      os.write(&*str.first, substring_len(str));
+    }
     void ragged_right(std::basic_ostream<Char>& os, const string_type& str);
+    void ragged_right_par(std::basic_ostream<Char>& os, const substring_type& par);
+    template<typename Pred, typename InputIterator, typename OutputIterator>
+    OutputIterator tokenize_to(const Pred& pred, const bool& skip_init, const InputIterator& first, const InputIterator& last, OutputIterator&& out);
   public:
     inline pbuf(std::basic_ostream<Char>& stream,
       const std::size_t& width,
@@ -93,40 +103,69 @@ namespace com { namespace masaers { namespace cmdlp {
 } } }
 
 
-/// \todo Handle unsynched newlines.
 template<typename Char>
 void com::masaers::cmdlp::pbuf<Char>::ragged_right(std::basic_ostream<Char>& os,
                                                    const typename com::masaers::cmdlp::pbuf<Char>::string_type& str) {
-  std::size_t offset = 0;
-  while (offset < str.size()) {
-    std::size_t indent_offset = 0;
-    if (offset == 0 && (break_at_first_m || ! first_paragraph_m)) {
+  const auto& pred = [](const Char& c) { return c != std::char_traits<Char>::to_char_type('\n'); };
+  std::vector<substring_type> pars;
+  tokenize_to(pred, false, str.begin(), str.end(), std::back_inserter(pars));
+  for (const auto& par : pars) {
+    ragged_right_par(os, par);
+    os << std::char_traits<Char>::to_char_type('\n');
+    first_paragraph_m = false;
+  }
+}
+
+template<typename Char>
+void com::masaers::cmdlp::pbuf<Char>::ragged_right_par(std::basic_ostream<Char>& os,
+                                                       const substring_type& par) {
+  using namespace std;
+  const auto& pred = [](const Char& c) { return ! isspace(c); };
+  vector<substring_type> tokens;
+  tokenize_to(pred, true, par.first, par.second, back_inserter(tokens));
+  if (! tokens.empty()) {
+    size_t len = 0;
+    if (break_at_first_m || ! first_paragraph_m) {
       os << pbreak_m;
-      indent_offset = pbreak_m.size();
+      len += pbreak_m.size();
     } else {
       os << margin_m;
-      indent_offset = margin_m.size();
+      len += margin_m.size();
     }
-    std::size_t next_offset = offset + width_m - indent_offset;
-    if (next_offset < str.size()) {
-      for (/**/; next_offset < str.size() && ! isspace(str.at(next_offset)); --next_offset);
-      if (next_offset <= offset) {
-        next_offset = offset + width_m - indent_offset;
-        if (! no_overflow_m) {
-          for (/**/; next_offset < str.size() && ! isspace(str.at(next_offset)); ++next_offset);
-        }
+    for (auto it = tokens.begin(); it != tokens.end(); ++it) {
+      if (len + 1 + substring_len(*it) > width_m) {
+        os << char_traits<Char>::to_char_type('\n') << margin_m;
+        len = margin_m.size();
       }
-      for (/**/; next_offset < str.size() &&   isspace(str.at(next_offset)); ++next_offset);
-    } else {
-      next_offset = str.size();
+      os << char_traits<Char>::to_char_type(' ');
+      write_substring_to(os, *it);
+      len += 1 + substring_len(*it);
     }
-    std::size_t last_offset = next_offset;
-    for (/**/; isspace(str.at(last_offset - 1)); --last_offset);
-    os.write(str.c_str() + offset, last_offset - offset);
-    os << '\n';
-    offset = next_offset;
   }
-  first_paragraph_m = false;
 }
+
+template<typename Char>
+template<typename Pred, typename InputIterator, typename OutputIterator>
+OutputIterator com::masaers::cmdlp::pbuf<Char>::tokenize_to(const Pred& pred,
+                                                            const bool& skip_init,
+                                                            const InputIterator& first,
+                                                            const InputIterator& last,
+                                                            OutputIterator&& out) {
+  InputIterator it = first;
+  InputIterator token_begin;
+  if (skip_init) {
+    for (/**/; it != last && ! pred(*it); ++it);
+  } 
+  token_begin = it;
+  while (it != last) {
+    for (/**/; it != last && pred(*it); ++it);
+    *out++ = substring_type(token_begin, it);
+    for (/**/; it != last && ! pred(*it); ++it);
+    token_begin = it;
+  }
+  return std::forward<OutputIterator>(out);
+}
+
+
 
 #endif
