@@ -86,15 +86,20 @@ struct local_options {
 int main(const int argc, const char** argv) {
   using namespace std;
   using namespace com::masaers::cmdlp;
-  options<local_options> o(argc, argv, options_config()
-    .argdesc("file_0 (... file_n)")
-    .preamble("This can be a pretty long text about what the program does, that "
-      "goes between the usage and the option descriptions. Just to give you "
-      "an idea, I am going to ramble on for a while; although I really don't have "
-      "that much to say.\nOh, and paragraphs should work to, so any newline will "
-      "be interpreted as a paragraph break. Neat, huh?")
-    .postamble("Again, lay out the text if you will! Maybe add some credits "
-      "(or copyright if you're not into the whole copyleft thing)."));
+  const char* preamble =
+  "This can be a pretty long text about what the program does, that "
+  "goes between the usage and the option descriptions. Just to give you "
+  "an idea, I am going to ramble on for a while; although I really don't have "
+  "that much to say.\nOh, and paragraphs should work to, so any newline will "
+  "be interpreted as a paragraph break. Neat, huh? (Keep in mind that C++ "
+  "transforms newlines when reading to and from fstreams, so it should be a "
+  "control-n regardless of which platform you're on.)"
+  ;
+  const char* postamble =
+  "Again, lay out the text if you will! Maybe add some credits "
+  "(or copyright if you're not into the whole copyleft thing)."
+  ;
+  options<local_options> o(argc, argv, options_config().argdesc("file_0 (... file_n)").preamble(preamble).postamble(postamble));
   if (! o) {
     return o.exit_code();
   }
