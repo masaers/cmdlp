@@ -112,7 +112,7 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
     cerr << p.help() << endl;
     if (! cfg.postamble().empty()) {
       const auto p = paragraph(cerr, 72, 4, 2);
-      cerr << cfg.postamble() << endl;;
+      cerr << cfg.postamble() << endl;
     }
   } if (! dumpto.empty()) {
     ofstream ofs;

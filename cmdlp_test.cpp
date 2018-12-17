@@ -94,7 +94,7 @@ int main(const int argc, const char** argv) {
       "that much to say.\nOh, and paragraphs should work to, so any newline will "
       "be interpreted as a paragraph break. Neat, huh?")
     .postamble("Again, lay out the text if you will! Maybe add some credits "
-      "(or copyright if your not into the whole open source thing)."));
+      "(or copyright if you're not into the whole copyleft thing)."));
   if (! o) {
     return o.exit_code();
   }
