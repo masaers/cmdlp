@@ -81,6 +81,9 @@ Here are some advanced features that you might want to use after a while.
 **More informative help screen**
 In addition to the `argc` and `argv` parameters, you can also pass in a configuration object when creating your options. This allows you to provide strings describing your expected positional input as well as text that go before and after the list of options.
 
+**Pretty printing paragraphs**
+The method for pretty printing paragraphs is completely generic and contained in the `paragraph.hpp` header. It provides a modifier for a stream that changes the behavior of the stream to print paragraphs instead of lines while the modifier is in scope. Feel free to use it elsewhere!
+
 ### Advanced usage
 There are some advanced features that you probably do not need.
 

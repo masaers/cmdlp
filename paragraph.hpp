@@ -8,6 +8,54 @@
 
 namespace com { namespace masaers { namespace cmdlp {
 
+  /**
+  This is pretty much where all the magic happens, but I don't consider
+  it part of the API, so everything in it and its name is subject ot change
+  without prior notice. Use the factory functions below instead.
+  */
+  template<Char> class pbuf;
+
+  /**
+  Creates a basic paragraph where lines are at most width wide.
+  */
+  template<typename Char> inline pbuf<Char> paragraph(
+    /// The stream to modify.
+    std::basic_ostream<Char>& stream,
+    /// The column width. No line will be longer than this.
+    const std::size_t width,
+    /// The margin width. The number of spaces printed before the column
+    /// content starts.
+    std::size_t margin);
+
+  /**
+  Creates a basic paragraph where paragraph breaks are represetned with an
+  additional number of whitespaces.
+  */
+  template<typename Char> inline pbuf<Char> paragraph(
+    /// The stream to modify.
+    std::basic_ostream<Char>& stream,
+    /// The column width. No line will be longer than this.
+    const std::size_t width,
+    /// The margin width. The number of spaces printed before the column
+    /// content starts.
+    std::size_t margin,
+    /// The number of spaces to indent (positive) or outdent (negative)
+    /// the first line after a paragraph break.
+    int pbreak_margin_delta);
+
+  /**
+  Creates a hanging list, where the first line is not indented, but subsequent
+  lines in the same paragraph are.
+  */
+  template<typename Char> inline pbuf<Char> hanging_list(
+    /// The stream to modify.
+    std::basic_ostream<Char>& stream,
+    /// The column width. No line will be longer than this.
+    const std::size_t width,
+    /// The number of white spaces to indent subsequent lines.
+    const std::size_t indent);
+  
+
   template<typename Char>
   class pbuf : public std::basic_stringbuf<Char> {
   public:
