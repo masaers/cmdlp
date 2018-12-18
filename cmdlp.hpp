@@ -88,11 +88,9 @@ namespace com { namespace masaers { namespace cmdlp {
   template<typename Key, typename Value>
   struct to_stream<std::pair<Key, Value> > {
     inline void operator()(const std::pair<Key, Value>& kv, std::ostream& out) const {
-      out << "'";
       to_stream<typename std::decay<Key>::type>()(kv.first, out);
       out << ":";
       to_stream<typename std::decay<Value>::type>()(kv.second, out);
-      out << "'";
     }
   };
   template<>
@@ -112,6 +110,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void evaluate(std::ostream& os) const = 0;
     virtual bool validate() const = 0;
     virtual bool in_usage() const = 0;
+    virtual bool is_meta() const = 0;
   }; // option_i
   
   template<typename T, typename Value>
@@ -120,7 +119,7 @@ namespace com { namespace masaers { namespace cmdlp {
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
     typedef std::function<void(Value&, const char*)> read_func;
-    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()) {}
+    inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()), is_meta_m(false) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
     virtual ~option_crtp() {}
@@ -129,6 +128,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void describe(std::ostream& os) const { os << desc_m; }
     virtual bool validate() const { return count() > 0; }
     virtual bool in_usage() const { return false; }
+    virtual bool is_meta() const { return is_meta_m; }
     template<typename U> inline T& desc(U&& str) {
       desc_m = std::forward<U>(str);
       return me();
@@ -139,6 +139,10 @@ namespace com { namespace masaers { namespace cmdlp {
     }
     inline T& on_read(const read_func& read) {
       read_m = read;
+      return me();
+    }
+    inline T& is_meta() {
+      is_meta_m = true;
       return me();
     }
     inline std::size_t& count() { return count_m; }
@@ -152,7 +156,8 @@ namespace com { namespace masaers { namespace cmdlp {
     std::size_t count_m;
     parser* parser_ptr_m;
     std::string desc_m;
-    read_func read_m; 
+    read_func read_m;
+    bool is_meta_m;
   }; // option_crtp
   
   template<typename T>
@@ -383,7 +388,7 @@ namespace com { namespace masaers { namespace cmdlp {
     ~parser();
     std::string usage() const;
     std::string help() const;
-    void dumpto_stream(std::ostream& out) const;
+    void dumpto_stream(std::ostream& out, bool include_meta) const;
 
     template<typename arg_it_T = null_output_iterator>
     std::size_t parse(const int argc,
@@ -423,30 +428,6 @@ namespace com { namespace masaers { namespace cmdlp {
     std::unordered_map<std::string, option_i*> names_m;
     std::ostream* erros_m;
   }; // parser
-  
-  namespace options_helper {
-    template<typename me_T, typename parser_T>
-    inline void init_bases(me_T&, parser_T&) {}
-    template<typename me_T, typename parser_T, typename T, typename... Ts>
-    inline void init_bases(me_T& me, parser_T& p) {
-      static_cast<T&>(me).init(p);
-      init_bases<me_T, parser_T, Ts...>(me, p);
-    }
-  } // namespace options_helper
-  
-  template<typename... options_T>
-  class options : public options_T... {
-  public:
-    inline options(const int argc, const char** argv);
-    inline options(const int argc, char** argv) : options(argc, (const char**)argv) {}
-    inline operator bool() const { return ! help_needed(); }
-    inline int exit_code() const { return error_count_m == 0 ? EXIT_SUCCESS : EXIT_FAILURE; }
-    std::vector<std::string> args;
-  private:
-    inline bool help_needed() const { return help_requested_m || error_count_m != 0; }
-    bool help_requested_m;
-    std::size_t error_count_m;
-  }; // options
   
   
 } } } // namespace com::masaers::cmdlp
@@ -574,54 +555,5 @@ std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv
   return error_count;
 }
 
-
-
-template<typename... options_T> 
-com::masaers::cmdlp::options<options_T...>::options(const int argc, const char** argv) : options_T()..., help_requested_m(false), error_count_m(0) {
-  using namespace std;
-  string dumpto;
-  config_files configs;
-  parser p(cerr);
-  options_helper::init_bases<options<options_T...>, parser, options_T...>(*this, p);
-  p.add(make_knob(dumpto))
-  .name("dumpto")
-  .desc("Dumps the parameters, as undestood by the program, to a config file "
-    "that can later be used to rerun with the same settings. Leave empty to not dump. "
-    "Use '-' to dump to standard output.")
-  .fallback()
-  ;
-  p.add(make_knob(configs))
-  .name("config")
-  .desc("Read parameters from the provided file as if they were provided in the same position on the command line.")
-  ;
-  p.add(make_onswitch(help_requested_m))
-  .name('h', "help")
-  .desc("Prints the help message and exits normally.")
-  ;
-  error_count_m += p.parse(argc, argv, back_inserter(args));
-  error_count_m += p.validate();
-  if (help_needed()) {
-    cerr << endl << "usage: " << argv[0] << p.usage() << endl << endl << p.help() << endl;
-  } if (! dumpto.empty()) {
-    ofstream ofs;
-    ostream* out = nullptr;
-    if (dumpto == "-") {
-      out = &cout;
-    } else {
-      ofs.open(dumpto);
-      if (ofs) {
-        out = &ofs;
-      } else {
-        cerr << "Failed to open file '" << dumpto << "' for dumping parameters." << endl; 
-        ++error_count_m;
-      }
-    }
-    if (out != nullptr) {
-      p.dumpto_stream(*out);
-    }
-  } else {
-    // keep calm and continue as usual
-  }
-}
 
 #endif

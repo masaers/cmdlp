@@ -1,7 +1,11 @@
-#include "cmdlp.hpp"
+#include "options.hpp"
+#include "magic_enum.hpp"
+#include "paragraph.hpp"
+
 #include <iostream>
 #include <vector>
 #include <set>
+
 
 /**
   Cryptic read function.
@@ -38,6 +42,7 @@ struct local_options {
   std::set<std::string> strings;
   std::vector<std::string> cipher;
   std::map<std::string, float> constants;
+  knobs::magic_level::value magic_level;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
@@ -69,15 +74,56 @@ struct local_options {
     .name('c', "const")
     .fallback({ {"pi", 3.14} })
     ;
+    p.add(make_knob(magic_level))
+    .desc(knobs::magic_level::desc())
+    .name('m', "magic")
+    .fallback(knobs::magic_level::no_magic)
+    ;
     return;
   }
 };
 
 int main(const int argc, const char** argv) {
   using namespace std;
-  com::masaers::cmdlp::options<local_options> o(argc, argv);
+  using namespace com::masaers::cmdlp;
+  const char* preamble =
+  "This can be a pretty long text about what the program does, that "
+  "goes between the usage and the option descriptions. Just to give you "
+  "an idea, I am going to ramble on for a while; although I really don't have "
+  "that much to say.\nOh, and paragraphs should work to, so any newline will "
+  "be interpreted as a paragraph break. Neat, huh? (Keep in mind that C++ "
+  "transforms newlines when reading to and from fstreams, so it should be a "
+  "control-n regardless of which platform you're on.)"
+  ;
+  const char* postamble =
+  "Again, lay out the text if you will! Maybe add some credits "
+  "(or copyright if you're not into the whole copyleft thing)."
+  ;
+  options<local_options> o(argc, argv, options_config().argdesc("file_0 (... file_n)").preamble(preamble).postamble(postamble));
   if (! o) {
     return o.exit_code();
+  }
+  {
+    const auto p = com::masaers::cmdlp::paragraph(cout, 60, 2, 2);
+    cout << "Lorem Ipsum är en utfyllnadstext från tryck- och förlagsindustrin. "
+    << "Lorem ipsum har varit standard ända sedan 1500-talet, "
+    << "när en okänd boksättare tog att antal bokstäver och blandade dem för "
+    << "att göra ett provexemplar av en bok. Lorem ipsum har inte bara överlevt "
+    << "fem århundraden, utan även övergången till elektronisk typografi utan "
+    << "större förändringar. Det blev allmänt känt på 1960-talet i samband med "
+    << "lanseringen av Letraset-ark med avsnitt av Lorem Ipsum, och senare med "
+    << "mjukvaror som Aldus PageMaker."
+    << endl;
+  }
+  switch (o.magic_level) {
+    case knobs::magic_level::no_magic:
+    break;
+    case knobs::magic_level::less_magic:
+    break;
+    case knobs::magic_level::more_magic:
+    break;
+    default:
+    ;
   }
 
   return EXIT_SUCCESS;
