@@ -61,6 +61,9 @@ When the value being set is a container (eg. `vector`, `set`, or `unordered_map`
 **Key-value storage as container**
 When the container is a `map`, the value is considered to be a key&ndash;value pair, which you can give as either `key:value` or `key=value`. The keys need to be quoted if they contain spaces, colons or equal signs. Currently, there may be no spacing between the colon/equal sign and the key or the value.
 
+**Categorial knobs**
+Often time it is desireable to have a knob with descrete categorial values (like `enum`s) rather than continuous values (like `int`s or `float`s). In addition to knobs supporting `enum`s, this library comes with an XSLT style sheet that will convert a straight forward XML declaration of categorial values into a header containing a class that is specifically tailored to be used as the value of a categorial knob.
+
 ### Switches
 Switches are created with `make_onswitch` and `make_offswitch`. An on-switch starts as `false`, but becomes `true` if it is set (regardless of how many times). And off-switch starts as `true`, but becomes `false` if it is set (regardless of how many times). This behavior differs between the command line and config files, with config files overriding the value with of the underlying Boolean with a specific truth value (eg. `help=yes`).
 
