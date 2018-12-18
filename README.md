@@ -75,6 +75,12 @@ smooth=no
 ```
 Notice that switches are set rather than flipped from an assumed current position. For containers as values, you can either give the name on multiple rows, give multiple values  on a single line, or any mix of the two strategies.
 
+### Diving deeper
+Here are some advanced features that you might want to use after a while.
+
+**More informative help screen**
+In addition to the `argc` and `argv` parameters, you can also pass in a configuration object when creating your options. This allows you to provide strings describing your expected positional input as well as text that go before and after the list of options.
+
 ### Advanced usage
 There are some advanced features that you probably do not need.
 
