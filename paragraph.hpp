@@ -13,7 +13,7 @@ namespace com { namespace masaers { namespace cmdlp {
   it part of the API, so everything in it and its name is subject ot change
   without prior notice. Use the factory functions below instead.
   */
-  template<Char> class pbuf;
+  template<typename Char> class pbuf;
 
   /**
   Creates a basic paragraph where lines are at most width wide.
@@ -25,7 +25,7 @@ namespace com { namespace masaers { namespace cmdlp {
     const std::size_t width,
     /// The margin width. The number of spaces printed before the column
     /// content starts.
-    std::size_t margin);
+    const std::size_t margin);
 
   /**
   Creates a basic paragraph where paragraph breaks are represetned with an
@@ -38,10 +38,10 @@ namespace com { namespace masaers { namespace cmdlp {
     const std::size_t width,
     /// The margin width. The number of spaces printed before the column
     /// content starts.
-    std::size_t margin,
+    const std::size_t margin,
     /// The number of spaces to indent (positive) or outdent (negative)
     /// the first line after a paragraph break.
-    int pbreak_margin_delta);
+    const int pbreak_margin_delta);
 
   /**
   Creates a hanging list, where the first line is not indented, but subsequent
@@ -54,7 +54,7 @@ namespace com { namespace masaers { namespace cmdlp {
     const std::size_t width,
     /// The number of white spaces to indent subsequent lines.
     const std::size_t indent);
-  
+
 
   template<typename Char>
   class pbuf : public std::basic_stringbuf<Char> {
@@ -118,7 +118,7 @@ namespace com { namespace masaers { namespace cmdlp {
   };
 
   template<typename Char>
-  inline pbuf<Char> paragraph(std::basic_ostream<Char>& stream, const std::size_t width, std::size_t margin) {
+  inline pbuf<Char> paragraph(std::basic_ostream<Char>& stream, const std::size_t width, const std::size_t margin) {
     return pbuf<Char>(stream,
                       width,
                       typename pbuf<Char>::string_type(margin, ' '),
@@ -127,7 +127,7 @@ namespace com { namespace masaers { namespace cmdlp {
                       false);
   }
   template<typename Char>
-  inline pbuf<Char> paragraph(std::basic_ostream<Char>& stream, const std::size_t width, std::size_t margin, int pbreak_margin_delta) {
+  inline pbuf<Char> paragraph(std::basic_ostream<Char>& stream, const std::size_t width, const std::size_t margin, const int pbreak_margin_delta) {
     if (margin + pbreak_margin_delta < 0 || width <= margin || width <= margin + pbreak_margin_delta) {
       throw std::runtime_error("Negative or zero space in paragraph!");
     }
