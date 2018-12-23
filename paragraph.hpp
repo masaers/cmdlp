@@ -4,8 +4,6 @@
 #include <sstream>
 #include <string>
 
-#define LOGVAR(expr) std::clog << __FILE__ << ':' << __LINE__ << ' ' << #expr << "='" << (expr) << "'" << std::endl;
-
 namespace com { namespace masaers { namespace cmdlp {
 
   /**
