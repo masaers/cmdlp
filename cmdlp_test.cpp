@@ -117,15 +117,19 @@ int main(const int argc, const char** argv) {
 
 
   {
+    cout << "         1         2         3         4         5         6         7         8" << endl;;
+    cout << "12345678901234567890123456789012345678901234567890123456789012345678901234567890" << endl;
     const auto p = com::masaers::cmdlp::paragraph(cout, 60, 2, 2);
     cout << "Lorem Ipsum är en utfyllnadstext från tryck- och förlagsindustrin. "
-    << "Lorem ipsum har varit standard ända sedan 1500-talet, "
-    << "när en okänd boksättare tog att antal bokstäver och blandade dem för "
-    << "att göra ett provexemplar av en bok. Lorem ipsum har inte bara överlevt "
-    << "fem århundraden, utan även övergången till elektronisk typografi utan "
-    << "större förändringar. Det blev allmänt känt på 1960-talet i samband med "
-    << "lanseringen av Letraset-ark med avsnitt av Lorem Ipsum, och senare med "
-    << "mjukvaror som Aldus PageMaker."
+    "Lorem ipsum har varit standard ända sedan 1500-talet, "
+    "när en okänd boksättare tog att antal bokstäver och blandade dem för "
+    "att göra ett provexemplar av en bok. Lorem ipsum har inte bara överlevt "
+    "fem århundraden, utan även övergången till elektronisk typografi utan "
+    "större förändringar. Det blev allmänt känt på 1960-talet i samband med "
+    "lanseringen av Letraset-ark med avsnitt av Lorem Ipsum, och senare med "
+    "mjukvaror som Aldus PageMaker.\n"
+    "The Skåne town of Råå has a stream (å) with eel (ål): ie Råååål. Hope "
+    "that is enough unicode to give a bad linebreak."
     << endl;
   }
   switch (o.magic_level) {
