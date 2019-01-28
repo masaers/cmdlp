@@ -119,6 +119,7 @@ namespace com { namespace masaers { namespace cmdlp {
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
     typedef std::function<void(Value&, const char*)> read_func;
+    typedef std::function<bool(Value&)> validate_func;
     inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()), is_meta_m(false) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
@@ -164,7 +165,7 @@ namespace com { namespace masaers { namespace cmdlp {
   class value_option : public option_crtp<value_option<T>, T> {
     typedef option_crtp<value_option<T>, T> base_class;
   public:
-    value_option(T& value) : base_class(), value_m(&value), fallback_m(nullptr) {}
+    value_option(T& value) : base_class(), value_m(&value), fallback_m(nullptr), validate_m([](T&){return true;}) {}
     virtual ~value_option() {
       if (fallback_m != nullptr) {
         delete fallback_m;
@@ -179,7 +180,7 @@ namespace com { namespace masaers { namespace cmdlp {
         *value_m = *fallback_m;
         ++base_class::count();
       }
-      return base_class::validate();
+      return validate_m(*value_m) && base_class::validate();
     }
     virtual void evaluate(std::ostream& os) const { os << *value_m; }
     virtual bool in_usage() const { return fallback_m == nullptr; }
@@ -191,10 +192,15 @@ namespace com { namespace masaers { namespace cmdlp {
       }
       return *this;
     }
+    template<typename V> inline value_option& validator(V&& validate) {
+      validate_m = std::forward<V>(validate);
+      return *this;
+    }
     const T& value() const { return *value_m; }
   private:
     T* value_m;
     T* fallback_m;
+    typename base_class::validate_func validate_m;
   }; // value_option
   
 
