@@ -1,4 +1,5 @@
 #include "options.hpp"
+#include "iooption.hpp"
 #include "magic_enum.hpp"
 #include "paragraph.hpp"
 
@@ -43,6 +44,7 @@ struct local_options {
   std::vector<std::string> cipher;
   std::map<std::string, float> constants;
   knobs::magic_level::value magic_level;
+  com::masaers::cmdlp::ifile settings;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
@@ -79,6 +81,11 @@ struct local_options {
     .name('m', "magic")
     .fallback(knobs::magic_level::no_magic)
     ;
+    p.add(make_knob(settings))
+    .desc("A settings file.")
+    .name("settings")
+    .fallback("-")
+    ;
     return;
   }
 };
@@ -103,6 +110,12 @@ int main(const int argc, const char** argv) {
   if (! o) {
     return o.exit_code();
   }
+
+  for (string line; getline(o.settings.stream(), line); /**/) {
+    cout << "From settings: '" << line << "'" << endl;
+  }
+
+
   {
     const auto p = com::masaers::cmdlp::paragraph(cout, 60, 2, 2);
     cout << "Lorem Ipsum är en utfyllnadstext från tryck- och förlagsindustrin. "
