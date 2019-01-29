@@ -58,7 +58,7 @@ namespace com { namespace masaers { namespace cmdlp {
   class pbuf : public std::basic_stringbuf<Char> {
   public:
     typedef std::basic_string<Char> string_type;
-    typedef std::pair<typename string_type::const_iterator, typename string_type::const_iterator> substring_type;
+    typedef std::tuple<typename string_type::const_iterator, typename string_type::const_iterator, std::size_t> substring_type;
   protected:
     std::basic_streambuf<Char>* buf_m;
     std::basic_ostream<Char>* stream_m;
@@ -77,10 +77,11 @@ namespace com { namespace masaers { namespace cmdlp {
       return 0;
     }
     static inline constexpr std::size_t substring_len(const substring_type& str) {
-      return str.second - str.first;
+      return std::get<1>(str) - std::get<0>(str);
     }
     static inline void write_substring_to(std::basic_ostream<Char>& os, const substring_type& str) {
-      os.write(&*str.first, substring_len(str));
+      os.write(&*std::get<0>(str), substring_len(str));
+      // os.write(&*str.first, substring_len(str));
     }
     void ragged_right(std::basic_ostream<Char>& os, const string_type& str);
     void ragged_right_par(std::basic_ostream<Char>& os, const substring_type& par);
@@ -168,7 +169,7 @@ void com::masaers::cmdlp::pbuf<Char>::ragged_right_par(std::basic_ostream<Char>&
   using namespace std;
   const auto& pred = [](const Char& c) { return ! isspace(c); };
   vector<substring_type> tokens;
-  tokenize_to(pred, true, par.first, par.second, back_inserter(tokens));
+  tokenize_to(pred, true, std::get<0>(par), std::get<1>(par), back_inserter(tokens));
   if (! tokens.empty()) {
     size_t len = 0;
     if (break_at_first_m || ! first_paragraph_m) {
@@ -179,13 +180,13 @@ void com::masaers::cmdlp::pbuf<Char>::ragged_right_par(std::basic_ostream<Char>&
       len += margin_m.size();
     }
     for (auto it = tokens.begin(); it != tokens.end(); ++it) {
-      if (len + 1 + substring_len(*it) > width_m) {
+      if (len + 1 + std::get<2>(*it) > width_m) {
         os << char_traits<Char>::to_char_type('\n') << margin_m;
         len = margin_m.size();
       }
       os << char_traits<Char>::to_char_type(' ');
       write_substring_to(os, *it);
-      len += 1 + substring_len(*it);
+      len += 1 + std::get<2>(*it);
     }
   }
 }
@@ -199,19 +200,52 @@ OutputIterator com::masaers::cmdlp::pbuf<Char>::tokenize_to(const Pred& pred,
                                                             OutputIterator&& out) {
   InputIterator it = first;
   InputIterator token_begin;
+  std::size_t token_len;
   if (skip_init) {
     for (/**/; it != last && ! pred(*it); ++it);
   } 
   token_begin = it;
+  token_len = 0;
   while (it != last) {
-    for (/**/; it != last && pred(*it); ++it);
-    *out++ = substring_type(token_begin, it);
+    for (/**/; it != last && pred(*it); ++it) {
+      ++token_len;
+    }
+    *out++ = substring_type(token_begin, it, token_len);
     for (/**/; it != last && ! pred(*it); ++it);
     token_begin = it;
+    token_len = 0;
   }
   return std::forward<OutputIterator>(out);
 }
 
+template<>
+template<typename Pred, typename InputIterator, typename OutputIterator>
+OutputIterator com::masaers::cmdlp::pbuf<char>::tokenize_to(const Pred& pred,
+                                                            const bool& skip_init,
+                                                            const InputIterator& first,
+                                                            const InputIterator& last,
+                                                            OutputIterator&& out) {
+  InputIterator it = first;
+  InputIterator token_begin;
+  std::size_t token_len;
+  if (skip_init) {
+    for (/**/; it != last && ! pred(*it); ++it);
+  } 
+  token_begin = it;
+  token_len = 0;
+  while (it != last) {
+    for (/**/; it != last && pred(*it); ++it) {
+      if ((*it & 0xc0) != 0x80) {
+        ++token_len;
+      }
+    }
+    *out++ = substring_type(token_begin, it, token_len);
+    for (/**/; it != last && ! pred(*it); ++it);
+    token_begin = it;
+    token_len = 0;
+  }
+  return std::forward<OutputIterator>(out);
+}
 
 
 #endif
