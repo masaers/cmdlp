@@ -62,10 +62,10 @@ When the value being set is a container (eg. `vector`, `set`, or `unordered_map`
 When the container is a `map`, the value is considered to be a key&ndash;value pair, which you can give as either `key:value` or `key=value`. The keys need to be quoted if they contain spaces, colons or equal signs. Currently, there may be no spacing between the colon/equal sign and the key or the value.
 
 **Categorial knobs**
-Often time it is desireable to have a knob with descrete categorial values (like `enum`s) rather than continuous values (like `int`s or `float`s). In addition to knobs supporting `enum`s, this library comes with an XSLT style sheet that will convert a straight forward XML declaration of categorial values into a header containing a class that is specifically tailored to be used as the value of a categorial knob.
+Often time it is desireable to have a knob with descrete categorial values (like `enum`s) rather than numerical values (like `int`s or `float`s). In addition to knobs supporting `enum`s, this library comes with an XSLT style sheet that will convert a straight forward XML declaration of categorial values into a header containing a class that is specifically tailored to be used as the value of a categorial knob (see `data/magic_enum.xml` for an example of the declaration and `Makefile` for an example of how to generate code from it).
 
 ### Switches
-Switches are created with `make_onswitch` and `make_offswitch`. An on-switch starts as `false`, but becomes `true` if it is set (regardless of how many times). And off-switch starts as `true`, but becomes `false` if it is set (regardless of how many times). This behavior differs between the command line and config files, with config files overriding the value with of the underlying Boolean with a specific truth value (eg. `help=yes`).
+Switches are created with `make_onswitch` and `make_offswitch`. An on-switch starts as `false`, but becomes `true` if it is set (regardless of how many times). And off-switch starts as `true`, but becomes `false` if it is set (regardless of how many times). This behavior differs between the command line and config files, with config files overriding the value of the underlying Boolean with a specific truth value (eg. `help=yes`).
 
 ### Config files
 A config file is a text file that sets the parameters to your program much like variables in bash. Each line contains a *long* flag name followed by an equal sign, followed by the value to assign to the parameter. For example:
@@ -73,13 +73,13 @@ A config file is a text file that sets the parameters to your program much like 
 alpha=10
 smooth=no
 ```
-Notice that switches are set rather than flipped from an assumed current position. For containers as values, you can either give the name on multiple rows, give multiple values  on a single line, or any mix of the two strategies.
+Notice that switches are set rather than flipped from an assumed current position. For containers as values, you can either give the name on multiple rows, give multiple values  on a single line, or any mix of the two strategies (there is no way to &ldquo;reset&rd1uo; the container).
 
 ### Diving deeper
 Here are some advanced features that you might want to use after a while.
 
 **More informative help screen**
-In addition to the `argc` and `argv` parameters, you can also pass in a configuration object when creating your options. This allows you to provide strings describing your expected positional input as well as text that go before and after the list of options.
+In addition to the `argc` and `argv` parameters, you can also pass in a configuration object when creating your options. This allows you to provide strings describing your expected positional input as well as text that go before and after the list of options. Feed free to add newline characters which will be renderd as paragraph breaks.
 
 **Pretty printing paragraphs**
 The method for pretty printing paragraphs is completely generic and contained in the `paragraph.hpp` header. It provides a modifier for a stream that changes the behavior of the stream to print paragraphs instead of lines while the modifier is in scope. Feel free to use it elsewhere!
