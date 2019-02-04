@@ -32,10 +32,10 @@ GENERATED_HEADERS=build/include/magic_enum.hpp
 
 # Clear default suffix rules
 .SUFFIXES :
-# Keep STAMPs and dependencies between calls
-.PRECIOUS : %/.STAMP build/dep/%.d build/obj/%.o
 
-all : binaries
+.PRECIOUS : build/dep/%.d build/obj/%.o
+
+all : binaries build/lib/libcmdlp.a build/lib/libcmdlp.so
 
 binaries : $(GENERATED_HEADERS) $(BIN_NAMES:%=build/bin/%)
 
@@ -45,17 +45,30 @@ test : $(TEST_NAMES:%=build/test/%.out)
 	else echo "\n[ALL TESTS PASSED]\n"; \
 	fi
 
-build/bin/% : build/obj/%.o $(OBJECTS) build/bin/.STAMP
+build/lib/libcmdlp.a : $(OBJECTS)
+	@mkdir -pv ${@D}
+	$(AR) ruv $@ $^
+
+build/lib/libcmdlp.so : $(OBJECTS)
+	@mkdir -pv ${@D}
+	$(CXX) -shared -fPIC $(LDFLAGS) -o $@ $^
+
+build/bin/% : build/obj/%.o $(OBJECTS)
+	@mkdir -pv ${@D}
 	$(CXX) $(LDFLAGS) $< $(OBJECTS) -o $@
 
-build/obj/%.o : %.cpp build/obj/.STAMP build/dep/.STAMP
+build/obj/%.o : %.cpp
+	@mkdir -pv ${@D}
+	@mkdir -pv $(dir $(@:build/obj/%.o=build/dep/%.d))
 	$(CXX) $(CXXFLAGS) -MM -MT '$@' $< > $(@:build/obj/%.o=build/dep/%.d)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-build/include/%.hpp : data/%.xml build/include/.STAMP
+build/include/%.hpp : data/%.xml
+	@mkdir -pv ${@D}
 	xsltproc easenum.xslt $< > $@
 
-build/test/%.out : build/bin/% build/test/.STAMP
+build/test/%.out : build/bin/%
+	@mkdir -pv ${@D}
 	@if [ -e $@ ]; then \
 	( cp $@ $@.old; \
           $< &> $@; \
@@ -68,12 +81,8 @@ build/test/%.out : build/bin/% build/test/.STAMP
           echo "WARNING: No regression test: $<" >> build/test/.ERROR ) \
 	fi
 
-%/.STAMP :
-	@mkdir -pv $(@D)
-	@touch $@
-
 clean :
-	@rm -rf build/dep build/obj build/bin
+	@rm -rf build/dep build/obj build/bin build/lib
 	@rm -f *~
 
 cleaner : clean
