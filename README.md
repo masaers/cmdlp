@@ -80,6 +80,8 @@ Sometimes it is useful to have a whole file be part of the parameters to your pr
 
 This library currently offers four helpful values that you can use to create knobs: `ifile`, `ofile`, `optional_ofile` and `ifile_prefix`. Why no `optional_ifile`? Let me refer you to the Philosophy section above.
 
+The respective x`file`s manage the underlying files RAII-style, so files are opened during parameter validation, and closed when the managing object goes out of scope and is destroyed. If this is not what you want, just read in a string and implement your own file lifetime logic, this caters to the 90% case.
+
 Example:
 ```
 ifile poem;
