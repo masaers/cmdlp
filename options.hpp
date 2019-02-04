@@ -116,8 +116,8 @@ com::masaers::cmdlp::options<options_T...>::options(const int argc, const char**
       cerr << cfg.postamble() << endl;
     }
   }
-  if (dumpto.is_set()) {
-    p.dumpto_stream(dumpto.stream(), false);
+  if (dumpto) {
+    p.dumpto_stream(*dumpto, false);
   }
 }
 

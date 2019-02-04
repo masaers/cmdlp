@@ -22,12 +22,14 @@ namespace com { namespace masaers { namespace cmdlp {
 	template<typename Char, typename Traits>
 	class basic_ifile {
 	public:
-		basic_ifile() : filename_m(), ifsp_m(nullptr), sp_m(nullptr) {}
-		basic_ifile(const std::string& filename) : filename_m(filename), ifsp_m(nullptr), sp_m(nullptr) {} 
-		basic_ifile(const basic_ifile&) = default;
-		basic_ifile(basic_ifile&&) = default;
-		basic_ifile& operator=(const basic_ifile&) = default;
-		basic_ifile& operator=(basic_ifile&&) = default;
+		inline basic_ifile() : filename_m(), ifsp_m(nullptr), sp_m(nullptr) {}
+		inline basic_ifile(const std::string& filename) : filename_m(filename), ifsp_m(nullptr), sp_m(nullptr) {} 
+		inline basic_ifile(const basic_ifile&) = default;
+		inline basic_ifile(basic_ifile&&) = default;
+		inline basic_ifile& operator=(const basic_ifile&) = default;
+		inline basic_ifile& operator=(basic_ifile&&) = default;
+		inline std::basic_istream<Char, Traits>& operator*() const { return *sp_m; }
+		inline std::basic_istream<Char, Traits>* operator->() const { return sp_m; }
 		template<typename C, typename T>
 		friend inline std::basic_istream<C, T>&
 		operator>>(std::basic_istream<C, T>& is, basic_ifile& x) {
@@ -38,7 +40,6 @@ namespace com { namespace masaers { namespace cmdlp {
 		operator<<(std::basic_ostream<C, T>& os, const basic_ifile& x) {
 		  return os << x.filename_m;
 		}
-		std::basic_istream<Char, Traits>& stream() const { return *sp_m; }
 		inline bool validate() {
 			bool result = false;
 			if (! filename_m.empty()) {
@@ -62,12 +63,15 @@ namespace com { namespace masaers { namespace cmdlp {
 	template<bool IsOptional, typename Char, typename Traits>
 	class basic_ofile {
 	public:
-		basic_ofile() : filename_m(), ofsp_m(nullptr), sp_m(nullptr) {}
-		basic_ofile(const std::string& filename) : filename_m(filename), ofsp_m(nullptr), sp_m(nullptr) {}
-		basic_ofile(const basic_ofile&) = default;
-		basic_ofile(basic_ofile&&) = default;
-		basic_ofile& operator=(const basic_ofile&) = default;
-		basic_ofile& operator=(basic_ofile&) = default;
+		inline basic_ofile() : filename_m(), ofsp_m(nullptr), sp_m(nullptr) {}
+		inline basic_ofile(const std::string& filename) : filename_m(filename), ofsp_m(nullptr), sp_m(nullptr) {}
+		inline basic_ofile(const basic_ofile&) = default;
+		inline basic_ofile(basic_ofile&&) = default;
+		inline basic_ofile& operator=(const basic_ofile&) = default;
+		inline basic_ofile& operator=(basic_ofile&) = default;
+		inline operator bool() const { return sp_m != nullptr; }
+		inline std::basic_ostream<Char, Traits>& operator*() const { return *sp_m; }
+		inline std::basic_ostream<Char, Traits>* operator->() const { return sp_m; }
 		template<typename C, typename T>
 		friend inline std::basic_istream<C, T>&
 		operator>>(std::basic_istream<C, T>& is, basic_ofile<IsOptional, Char, Traits>& x) {
@@ -78,7 +82,6 @@ namespace com { namespace masaers { namespace cmdlp {
 		operator<<(std::basic_ostream<C, T>& os, const basic_ofile<IsOptional, Char, Traits>& x) {
 			return os << x.filename_m;
 		}
-		std::ostream& stream() const { return *sp_m; }
 		inline bool validate() {
 			bool result = IsOptional;
 			if (! filename_m.empty()) {
@@ -93,7 +96,6 @@ namespace com { namespace masaers { namespace cmdlp {
 			}
 			return result;
 		}
-		inline bool is_set() const { return sp_m != nullptr; }
 	protected:
 		std::string filename_m;
 		std::shared_ptr<std::basic_ofstream<Char, Traits> > ofsp_m;
@@ -110,13 +112,12 @@ namespace com { namespace masaers { namespace cmdlp {
 		typedef std::vector<ifile_type> container_type;
 		typedef typename container_type::iterator iterator;
 		typedef typename container_type::const_iterator const_iterator;
-		basic_ifile_prefix() : files_m() {}
-		basic_ifile_prefix(const std::string& prefix) : prefix_m(prefix) {}
-		basic_ifile_prefix(const basic_ifile_prefix&) = default;
-		basic_ifile_prefix(basic_ifile_prefix&&) = default;
-		basic_ifile_prefix& operator=(const basic_ifile_prefix&) = default;
-		basic_ifile_prefix& operator=(basic_ifile_prefix&&) = default;
-		friend bool validate_ifile_prefix(ifile_prefix&);
+		inline basic_ifile_prefix() : files_m() {}
+		inline basic_ifile_prefix(const std::string& prefix) : prefix_m(prefix) {}
+		inline basic_ifile_prefix(const basic_ifile_prefix&) = default;
+		inline basic_ifile_prefix(basic_ifile_prefix&&) = default;
+		inline basic_ifile_prefix& operator=(const basic_ifile_prefix&) = default;
+		inline basic_ifile_prefix& operator=(basic_ifile_prefix&&) = default;
 		template<typename C, typename T>
 		friend inline std::basic_istream<C, T>&
 		operator>>(std::basic_istream<C, T>& is, basic_ifile_prefix& x) {

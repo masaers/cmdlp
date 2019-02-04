@@ -117,7 +117,7 @@ int main(const int argc, const char** argv) {
     return o.exit_code();
   }
 
-  for (string line; getline(o.settings.stream(), line); /**/) {
+  for (string line; getline(*o.settings, line); /**/) {
     cout << "From settings: '" << line << "'" << endl;
   }
 
@@ -150,6 +150,9 @@ int main(const int argc, const char** argv) {
 
   for (const auto& ref : o.reference_files) {
     cout << "Reference file: '" << ref << "'." << endl;
+    size_t count = 0;
+    for (string line; getline(*ref, line); ++count);
+    cout << count << endl;
   }
   return EXIT_SUCCESS;
 }
