@@ -108,7 +108,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void assign(const char* str) = 0;
     virtual void describe(std::ostream& os) const = 0;
     virtual void evaluate(std::ostream& os) const = 0;
-    virtual bool validate() const = 0;
+    virtual bool validate() = 0;
     virtual bool in_usage() const = 0;
     virtual bool is_meta() const = 0;
   }; // option_i
@@ -119,6 +119,7 @@ namespace com { namespace masaers { namespace cmdlp {
     inline const T& me() const { return static_cast<const T&>(*this); }
   public:
     typedef std::function<void(Value&, const char*)> read_func;
+    typedef std::function<bool(Value&)> validate_func;
     inline option_crtp() : count_m(0), parser_ptr_m(nullptr), desc_m(), read_m(from_cstr<Value>()), is_meta_m(false) {}
     inline option_crtp(const option_crtp&) = default;
     inline option_crtp(option_crtp&&) = default;
@@ -126,7 +127,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual bool need_arg() const { return true; }
     virtual void observe() { ++count_m; }
     virtual void describe(std::ostream& os) const { os << desc_m; }
-    virtual bool validate() const { return count() > 0; }
+    virtual bool validate() { return count() > 0; }
     virtual bool in_usage() const { return false; }
     virtual bool is_meta() const { return is_meta_m; }
     template<typename U> inline T& desc(U&& str) {
@@ -164,7 +165,7 @@ namespace com { namespace masaers { namespace cmdlp {
   class value_option : public option_crtp<value_option<T>, T> {
     typedef option_crtp<value_option<T>, T> base_class;
   public:
-    value_option(T& value) : base_class(), value_m(&value), fallback_m(nullptr) {}
+    value_option(T& value) : base_class(), value_m(&value), fallback_m(nullptr), validate_m([](T&){return true;}) {}
     virtual ~value_option() {
       if (fallback_m != nullptr) {
         delete fallback_m;
@@ -174,13 +175,12 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void assign(const char* str) {
       base_class::read()(*value_m, str);
     }
-    virtual bool validate() const {
-      bool result = base_class::validate();
-      if (! result && fallback_m != nullptr) {
+    virtual bool validate() {
+      if (base_class::count() == 0 && fallback_m != nullptr) {
         *value_m = *fallback_m;
-        result = true;
+        ++base_class::count();
       }
-      return result;
+      return validate_m(*value_m) && base_class::validate();
     }
     virtual void evaluate(std::ostream& os) const { os << *value_m; }
     virtual bool in_usage() const { return fallback_m == nullptr; }
@@ -192,10 +192,15 @@ namespace com { namespace masaers { namespace cmdlp {
       }
       return *this;
     }
+    template<typename V> inline value_option& validator(V&& validate) {
+      validate_m = std::forward<V>(validate);
+      return *this;
+    }
     const T& value() const { return *value_m; }
   private:
     T* value_m;
     T* fallback_m;
+    typename base_class::validate_func validate_m;
   }; // value_option
   
 
@@ -215,9 +220,10 @@ namespace com { namespace masaers { namespace cmdlp {
       base_class::read()(v, str);
       container_m->insert(container_m->end(), v);
     }
-    virtual bool validate() const {
-      if (! base_class::validate() && fallback_m != nullptr) {
+    virtual bool validate() {
+      if (base_class::count() == 0 && fallback_m != nullptr) {
         *container_m = *fallback_m;
+        ++base_class::count();
       }
       return true;
     }
@@ -268,7 +274,7 @@ namespace com { namespace masaers { namespace cmdlp {
     virtual void assign(const char* str) {
       base_class::read()(*value_m, str);
     }
-    virtual bool validate() const { return true; }
+    virtual bool validate() { return true; }
     virtual void evaluate(std::ostream& os) const {
       os << (*value_m ? "yes" : "no");
     }
@@ -284,7 +290,7 @@ namespace com { namespace masaers { namespace cmdlp {
     value_option(config_files& config_files) : base_class(), config_files_m(&config_files), error_count_m(0) {}
     virtual ~value_option() {}
     virtual void assign(const char* str);
-    virtual bool validate() const { return true; }
+    virtual bool validate() { return true; }
     virtual void evaluate(std::ostream& os) const;
   private:
     config_files* config_files_m;
