@@ -9,8 +9,17 @@
 
 namespace com { namespace masaers { namespace cmdlp {
 	const char stdio_filename[] = "-";
+	template<typename Char, typename Traits = std::char_traits<Char> > class basic_ifile;
+	template<bool IsOptional, typename Char, typename Traits = std::char_traits<Char> > class basic_ofile;
+	template<typename Char, typename Traits = std::char_traits<Char> > class basic_ifile_prefix;
 
-	template<typename Char, typename Traits = std::char_traits<Char> >
+	using ifile          = basic_ifile<char>;
+	using ofile          = basic_ofile<false, char>;
+	using optional_ofile = basic_ofile<true, char>;
+	using ifile_prefix   = basic_ifile_prefix<char>;
+
+
+	template<typename Char, typename Traits>
 	class basic_ifile {
 	public:
 		basic_ifile() : filename_m(), ifsp_m(nullptr), sp_m(nullptr) {}
@@ -50,7 +59,7 @@ namespace com { namespace masaers { namespace cmdlp {
 		std::basic_istream<Char, Traits>* sp_m;
 	}; // basic_ifile
 
-	template<bool IsOptional, typename Char, typename Traits = std::char_traits<Char> >
+	template<bool IsOptional, typename Char, typename Traits>
 	class basic_ofile {
 	public:
 		basic_ofile() : filename_m(), ofsp_m(nullptr), sp_m(nullptr) {}
@@ -89,23 +98,80 @@ namespace com { namespace masaers { namespace cmdlp {
 		std::string filename_m;
 		std::shared_ptr<std::basic_ofstream<Char, Traits> > ofsp_m;
 		std::basic_ostream<Char, Traits>* sp_m;
-	}; //basic_ofile
+	}; // basic_ofile
 
+	
+	bool expand_prefix(const std::string& prefix_path, std::vector<std::string>& filennames);
 
-	using ifile = basic_ifile<char>;
-	using ofile = basic_ofile<false, char>;
-	using optional_ofile = basic_ofile<true, char>;
+	template<typename Char, typename Traits>
+	class basic_ifile_prefix {
+	public:
+		typedef basic_ifile<Char, Traits> ifile_type;
+		typedef std::vector<ifile_type> container_type;
+		typedef typename container_type::iterator iterator;
+		typedef typename container_type::const_iterator const_iterator;
+		basic_ifile_prefix() : files_m() {}
+		basic_ifile_prefix(const std::string& prefix) : prefix_m(prefix) {}
+		basic_ifile_prefix(const basic_ifile_prefix&) = default;
+		basic_ifile_prefix(basic_ifile_prefix&&) = default;
+		basic_ifile_prefix& operator=(const basic_ifile_prefix&) = default;
+		basic_ifile_prefix& operator=(basic_ifile_prefix&&) = default;
+		friend bool validate_ifile_prefix(ifile_prefix&);
+		template<typename C, typename T>
+		friend inline std::basic_istream<C, T>&
+		operator>>(std::basic_istream<C, T>& is, basic_ifile_prefix& x) {
+			return is >> x.prefix_m;
+		}
+		template<typename C, typename T>
+		friend inline std::basic_ostream<C, T>&
+		operator<<(std::basic_ostream<C, T>& os, basic_ifile_prefix& x) {
+			return os << x.prefix_m;
+		}
+		inline const_iterator cbegin() const { return files_m.begin(); }
+		inline const_iterator begin() const { return files_m.begin(); }
+		inline iterator begin() { return files_m.begin(); }
+		inline const_iterator cend() const { return files_m.end(); }
+		inline const_iterator end() const { return files_m.end(); }
+		inline iterator end() { return files_m.end(); }
+		inline bool validate() {
+			std::vector<std::string> filenames;
+			bool result = expand_prefix(prefix_m, filenames);
+			for (const auto& filename : filenames) {
+				files_m.push_back(filename);
+				result = result && files_m.back().validate();
+			}
+			return result;
+		}
+	protected:
+		std::string prefix_m;
+		container_type files_m;
+	}; // ifile_prefix
 
 
 	template<typename Char, typename Traits>
-	inline value_option<basic_ifile<Char, Traits> > make_knob(basic_ifile<Char, Traits>& value) {
-		return value_option<basic_ifile<Char, Traits> >(value).validator([](basic_ifile<Char, Traits>& x) { return x.validate(); });
+	inline value_option<basic_ifile<Char, Traits> >
+	make_knob(basic_ifile<Char, Traits>& value) {
+		return value_option<basic_ifile<Char, Traits> >(value)
+		.validator([](basic_ifile<Char, Traits>& x) { return x.validate(); })
+		;
 	}
 
 	template<bool IsOptional, typename Char, typename Traits>
-	inline value_option<basic_ofile<IsOptional, Char, Traits> > make_knob(basic_ofile<IsOptional, Char, Traits>& value) {
-	  return value_option<basic_ofile<IsOptional, Char, Traits> >(value).validator([](basic_ofile<IsOptional, Char, Traits>& x) { return x.validate(); });
+	inline value_option<basic_ofile<IsOptional, Char, Traits> >
+	make_knob(basic_ofile<IsOptional, Char, Traits>& value) {
+	  return value_option<basic_ofile<IsOptional, Char, Traits> >(value)
+	  .validator([](basic_ofile<IsOptional, Char, Traits>& x) { return x.validate(); })
+	  ;
 	}
+
+	template<typename Char, typename Traits>
+	inline value_option<basic_ifile_prefix<Char, Traits> >
+	make_knob(basic_ifile_prefix<Char, Traits>& value) {
+		return value_option<basic_ifile_prefix<Char, Traits> >(value)
+		.validator([](basic_ifile_prefix<Char, Traits>& value){ return value.validate(); })
+		;
+	}
+
 
 } } }
 
