@@ -45,6 +45,7 @@ struct local_options {
   std::map<std::string, float> constants;
   knobs::magic_level::value magic_level;
   com::masaers::cmdlp::ifile settings;
+  com::masaers::cmdlp::ifile_prefix reference_files;
   // const char* cstr;
   void init(com::masaers::cmdlp::parser& p) {
     using namespace com::masaers::cmdlp;
@@ -86,6 +87,11 @@ struct local_options {
     .name("settings")
     .fallback("-")
     ;
+    p.add(make_knob(reference_files))
+    .desc("A prefix for reference files.")
+    .name("reference_file_prefix")
+    .name("refs")
+    ;
     return;
   }
 };
@@ -115,7 +121,6 @@ int main(const int argc, const char** argv) {
     cout << "From settings: '" << line << "'" << endl;
   }
 
-
   {
     cout << "         1         2         3         4         5         6         7         8" << endl;;
     cout << "12345678901234567890123456789012345678901234567890123456789012345678901234567890" << endl;
@@ -143,6 +148,9 @@ int main(const int argc, const char** argv) {
     ;
   }
 
+  for (const auto& ref : o.reference_files) {
+    cout << "Reference file: '" << ref << "'." << endl;
+  }
   return EXIT_SUCCESS;
 }
 
