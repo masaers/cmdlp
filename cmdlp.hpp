@@ -461,7 +461,7 @@ template<typename arg_it_T>
 std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv, arg_it_T&& arg_it) const {
   static const char null_str = '\0';
   std::size_t error_count = 0;
-  const char** first = argv;
+  const char** first = argv + 1;
   const char** last = argv + argc;
   while (first != last) {
     const char* i = *first;
@@ -472,7 +472,9 @@ std::size_t com::masaers::cmdlp::parser::parse(const int argc, const char** argv
         // '--*' long name
         ++i;
         if (*i == '\0') {
-          // '--' ignore-rest
+          // '--' treat rest as arguments
+          ++first;
+          std::copy(first, last, arg_it);
           first = last;
           i = &null_str;
         } else {
