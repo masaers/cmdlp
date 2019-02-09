@@ -8,7 +8,7 @@ A computer program can be viewed as a function: it takes some inputs and produce
 
 &lt;opinion&gt;Thinking of a program in terms of a function with hyper parameters and inputs helps you write cleaner, clearer, and correcter code&lt;/opinion&gt;. This library has been designed to help with this. The hyper parameters are thought of as a set of *knobs* and *switches* that you use to set the value of a corresponding set of variables in your program. The inputs are though of as a set of files that your program operates on. (Don't worry, if it makes sense, there is nothing stopping you from turning a knob to set an input parameter.)
 
-Obviously, the POSIX standard should be followed.
+Obviously, the [POSIX standard](http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html#tag_12_01) should be followed.
 
 ### But what about randomization?
 Hate to break it to you, but your computer is incapable of randomness. What you are doing is implicitly setting the random seed of a pseudo random number generator typically based on the time of execution. *If you are a scientist, for the love of all that is reproducible, provide a knob to deterministically set the random seed!* If your result tables cannot be recreated reproducibility is out the window. Don't make wall clock at runtime an input to your program. (For funsies you may add a switch to explicitly disable reproducibility, if that's your thing.)
