@@ -51,7 +51,7 @@ void com::masaers::cmdlp::escape_str(const char quote, const std::string& str, s
 
 void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::assign(const char* str) {
   base_class::read()(*config_files_m, str);
-  error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
+  base_class::parser_ptr()->error_count_m += base_class::parser_ptr()->parse_file(config_files_m->filenames().back().c_str());
 }
 
 void com::masaers::cmdlp::value_option<com::masaers::cmdlp::config_files>::evaluate(std::ostream& out) const {
