@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
-
+#include <map>
 
 /**
   Cryptic read function.
@@ -117,6 +117,9 @@ int main(const int argc, const char** argv) {
     return o.exit_code();
   }
 
+  for (const auto& file : o.args) {
+    cout << "File: " << file << endl;
+  }
   for (string line; getline(*o.settings, line); /**/) {
     cout << "From settings: '" << line << "'" << endl;
   }
