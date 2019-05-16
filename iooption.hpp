@@ -18,6 +18,25 @@ namespace com { namespace masaers { namespace cmdlp {
 	using optional_ofile = basic_ofile<true, char>;
 	using ifile_prefix   = basic_ifile_prefix<char>;
 
+	// class path {
+	// public:
+	// 	inline path() : path_m() {}
+	// 	inline path(const std::string& str) : path_m(str) {}
+	// 	inline path(std::string&& str) : path_m(std::move(str)) {}
+	// 	inline path(const path&) = default;
+	// 	inline path(path&&) = default;
+	// 	inline path& operator=(const path&) = default;
+	// 	inline path& operator=(path&&) = default;
+	// 	inline std::string& str() { return path_m; }
+	// 	inline const std::string& str() const { return path_m; }
+	// 	inline const char* c_str() const { return path_m.c_str(); }
+	// protected:
+	// 	std::string path_m;
+	// }; // path
+
+	// bool validate_ipath(path& value);
+	// bool validate_opath(path& value);
+
 
 	template<typename Char, typename Traits>
 	class basic_ifile {
