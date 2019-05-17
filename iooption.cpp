@@ -4,20 +4,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-// #include <libgen.h>
 #include <dirent.h>
 // C
 #include <climits>
 #include <cstdlib>
-
-// static bool is_directory(const std::string& path) {
-// 	bool result = false;
-// 	struct stat statbuf;
-// 	if (stat(path.c_str(), &statbuf) == 0) {
-// 		result = S_ISDIR(statbuf.st_mode);
-// 	}
-// 	return result;
-// }
 
 static bool is_file(const std::string& path) {
 	bool result = false;
@@ -27,39 +17,6 @@ static bool is_file(const std::string& path) {
 	}
 	return result;
 }
-
-// static bool file_is_readable(const std::string& path) {
-// 	bool result = false;
-// 	if (! path.empty()) {
-// 		if (path == com::masaers::cmdlp::stdio_filename) {
-// 			result = true;
-// 		} else {
-// 			result = (access(path.c_str(), R_OK) == 0);
-// 		}
-// 	}
-// 	return result;
-// }
-
-// static bool file_is_writable(const std::string& path) {
-// 	static thread_local char path_copy[PATH_MAX];
-// 	static thread_local struct stat dir_stat; 
-// 	bool result = false;
-// 	if (! path.empty()) {
-// 		if (path == com::masaers::cmdlp::stdio_filename) {
-// 			result = true;
-// 		} else {
-// 			if (access(path.c_str(), F_OK) == 0) {
-// 				// File exists: check that it is writable.
-// 				result = (access(path.c_str(), W_OK) == 0);
-// 			} else {
-// 				// File does not exist: check that it is creatable.
-// 				std::copy(path.begin(), path.end(), path_copy);
-// 				result = ((stat(dirname(path_copy), &dir_stat) == 0) && S_ISDIR(dir_stat.st_mode));
-// 			}
-// 		}
-// 	}
-// 	return result;
-// }
 
 static bool prefix_match(const std::string& prefix, const char* filename) {
 	bool result = true;
@@ -76,7 +33,7 @@ static bool prefix_match(const std::string& prefix, const char* filename) {
 static std::string normalize_path(const std::string& path) {
 	static thread_local char norm_buffer[PATH_MAX];
 	if (realpath(path.c_str(), norm_buffer) == nullptr) {
-		throw std::runtime_error("Failed call realpath.");
+		throw std::runtime_error("Failed to call realpath.");
 	}
 	return norm_buffer;
 }
@@ -118,14 +75,6 @@ bool com::masaers::cmdlp::expand_prefix(const std::string& prefix_path, std::vec
 	}
 	return result;
 }
-
-// bool com::masaers::cmdlp::validate_ipath(path& value) {
-// 	return file_is_readable(value.str());
-// }
-
-// bool com::masaers::cmdlp::validate_opath(path& value) {
-// 	return file_is_writable(value.str());
-// }
 
 #else
 
